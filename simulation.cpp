@@ -9,7 +9,8 @@
 #include <iterator>
 #include <numeric>
 #include <cmath>
-// #include <filesystem>
+
+#include <sys/stat.h>
 
 #include "filters.h"
 #include "sequence.h" 
@@ -212,6 +213,191 @@ std::string joinPath(const std::string& directory, const std::string& file) {
     return path;
 }
 
+#define CSV_LINE(variable) #variable
+
+// Function to write CSV header with variable names
+void writeCSVHeader(std::ofstream& outputFile, const std::vector<std::string>& variableNames) {
+    for (size_t i = 0; i < variableNames.size(); ++i) {
+        outputFile << variableNames[i];
+        if (i < variableNames.size() - 1) {
+            outputFile << ",";
+        }
+    }
+    outputFile << std::endl;
+}
+
+// Function to check if file is empty
+bool isFileEmpty(const std::string& fileName) {
+    struct stat fileStat;
+    if (stat(fileName.c_str(), &fileStat) != 0) {
+        // File does not exist, consider it as empty
+        return true;
+    }
+    return fileStat.st_size == 0;
+}
+
+void runSimulation(unsigned int lag, double threshold, double influence, const std::string& directoryPath) {
+    std::string logFileName = "allSensorLogFile.txt";
+    std::string logFilePath = directoryPath + "/" + logFileName; // Adjusted for simplicity
+
+    std::ifstream logFile(logFilePath);
+    if (!logFile.is_open()) {
+        std::cerr << "Error: Unable to open log file." << std::endl;
+        return;
+    }
+
+    // Initialize Active Filter
+    ActiveFilter actFilter;
+
+    // Initialize IIR Filter
+    ThreeAxisIIR iirFiltAccel;
+    ThreeAxisIIR iirFiltGyro;
+
+    // Parameters for the Active Filter
+    actFilter.setWindowParameters(50, 35);
+    actFilter.setThreshold(0.2);
+
+    ThreeAxisIIR_Init(&iirFiltAccel, filterAlpha);
+    ThreeAxisIIR_Init(&iirFiltGyro, filterAlpha);
+
+    // Variables to store the accel, gyro and angle values
+    double ax, ay, az;
+    double gr, gp, gy;
+
+    // Variables to store the filtered/rotated acceleration values
+    double ax_filtered, ay_filtered, az_filtered;
+    double ax_rotated, ay_rotated, az_rotated;
+
+    // Variables to store the filtered/rotated gyroscope values
+    double gr_filtered, gp_filtered, gy_filtered;
+    double gr_rotated, gp_rotated, gy_rotated;
+
+    // Variables to store the angles:
+    double pitchAngle{ 0.0 };
+    double rollAngle{ 0.0 };
+
+    // Variable to store the compound acceleration vector:
+    double compoundAccelerationVector{ 0.0 };
+
+    int sampleNumber{ 0 };
+    const unsigned int wholeDequeSize{ 150 };
+    unsigned int removeSamples{ 0 };
+
+    std::deque<double> outData;
+    outData.clear();
+
+    std::deque<double> completedData;
+    completedData.clear();
+
+    std::deque<double> state;
+    state.clear();
+
+    std::deque<int> stateDeque;
+    stateDeque.clear();
+
+    std::string line;
+
+    std::cout << "Starting Simulation for lag=" << lag << ", threshold=" << threshold << ", influence=" << influence << std::endl;
+
+    while (std::getline(logFile, line)) {
+        std::istringstream ss(line);
+        std::string token;
+
+        while (std::getline(ss, token, ',')) {
+            std::istringstream pairStream(token);
+            std::string key, value;
+            if (std::getline(pairStream, key, '=') && std::getline(pairStream, value)) {
+                double val = std::stod(value);
+                if (key == "ax") ax = val;
+                else if (key == "ay") ay = val;
+                else if (key == "az") az = val;
+                else if (key == "gr") gr = val;
+                else if (key == "gp") gp = val;
+                else if (key == "gy") gy = val;
+            }
+        }
+
+        ThreeAxisIIR_Update(&iirFiltAccel, ax, ay, az, &ax_filtered, &ay_filtered, &az_filtered);
+        ThreeAxisIIR_Update(&iirFiltGyro, gr, gp, gy, &gr_filtered, &gp_filtered, &gy_filtered);
+
+        complementaryFilter(ax_filtered, ay_filtered, az_filtered, gr_filtered, gp_filtered, gy_filtered, &rollAngle, &pitchAngle);
+
+        rotateAll(rollAngle*degreesToRadians, pitchAngle*degreesToRadians, ax_filtered, ay_filtered, az_filtered, &ax_rotated, &ay_rotated, &az_rotated);
+        rotateAll(rollAngle*degreesToRadians, pitchAngle*degreesToRadians, gr_filtered, gp_filtered, gy_filtered, &gr_rotated, &gp_rotated, &gy_rotated);
+
+        compoundAccelerationVector = compoundVector(ax_rotated, ay_rotated, az_rotated);
+
+        actFilter.feedData(compoundAccelerationVector);
+
+        if (actFilter.getCompletedDataSize() > 0) {
+            std::deque<double> completedData = actFilter.getCompletedData();
+            AppendDeque(outData, completedData);
+        }
+
+        if (outData.size() > wholeDequeSize) {
+            removeSamples = static_cast<unsigned int>(outData.size() - wholeDequeSize);
+            outData.erase(outData.begin(), outData.begin() + removeSamples);
+        }
+
+        sampleNumber++;
+
+        if (outData.size() == wholeDequeSize) {
+            state = z_score_thresholding(outData, lag, threshold, influence);
+        }
+
+        if (getStateChange(state) == SequenceType::Rising) {
+            stateDeque.push_back(1);
+        }
+
+        if (getStateChange(state) == SequenceType::Falling) {
+            stateDeque.push_back(-1);
+        }
+
+        if (getStateChange(state) == SequenceType::Stable) {
+            stateDeque.push_back(0);
+        }
+    }
+
+    logFile.close();
+
+    // ---------------- Save Variables Used in Runtime: --------------------------
+
+    std::string ZTransformVariablesFileName = "z_transform_variables.csv";
+    std::ofstream ZTransformVariablesOutputFile(ZTransformVariablesFileName, std::ios::app);
+
+    if (!ZTransformVariablesOutputFile.is_open()) {
+        std::cerr << "Error opening file!" << std::endl;
+        return;
+    }
+
+    std::vector<std::string> variableNames = {"lag", "threshold", "influence"};
+    if (isFileEmpty(ZTransformVariablesFileName)) {
+        writeCSVHeader(ZTransformVariablesOutputFile, variableNames);
+    }
+
+    ZTransformVariablesOutputFile << lag << "," << threshold << "," << influence << std::endl;
+    ZTransformVariablesOutputFile.close();
+
+    std::string outputFilename = "output_state_signals.txt";
+    std::ofstream outputFile(outputFilename);
+
+    if (!outputFile.is_open()) {
+        std::cerr << "Failed to open " << outputFilename << std::endl;
+        return;
+    }
+
+    for (const auto& signal : stateDeque) {
+        outputFile << signal << "\n";
+    }
+
+    outputFile.close();
+
+    std::cout << "Simulation for lag=" << lag << ", threshold=" << threshold << ", influence=" << influence << " completed." << std::endl;
+}
+
+
+
+
 int main(int argc, char* argv[]){
 
     if (argc != 2) {
@@ -220,6 +406,27 @@ int main(int argc, char* argv[]){
     }
 
     std::string directoryPath = argv[1];
+
+    for (unsigned int lag = 10; lag <= 100; lag += 5) {
+        for (double threshold = 5.0; threshold <= 50.0; threshold += 5.0) {
+            for (double influence = 0.0; influence <= 1.0; influence += 0.05) {
+                runSimulation(lag, threshold, influence, directoryPath);
+            }
+        }
+    }
+
+    std::cout << "All simulations completed." << std::endl;
+
+    return 0;
+
+}
+
+
+// --------------------------------------------------------------------------------
+
+
+    /*
+    
     std::string logFileName = "allSensorLogFile.txt";
     std::string logFilePath = joinPath(directoryPath, logFileName);
     
@@ -368,30 +575,37 @@ int main(int argc, char* argv[]){
     std::cout << "Simulation Ends." << std::endl;
     logFile.close();
 
-    /*
-    std::string outputFilename;
-
     
-    // Assuming directoryPath ends with something like "\\2024-05-26_11-55-00"
-    size_t pos = directoryPath.rfind('\\');
-    if (pos != std::string::npos) {
-        std::string datePart = directoryPath.substr(pos + 1);
-        std::string newFolderName = datePart + "_output";
+    // ---------------- Save Variables Used in Runtime: --------------------------
 
-        // Create a new folder using a shell command
-        std::string cmd = "mkdir \"" + directoryPath + "\\" + newFolderName + "\"";
-        std::system(cmd.c_str());
+    // Vector to hold variable names
+    std::vector<std::string> variableNames = {CSV_LINE(lag), CSV_LINE(threshold), CSV_LINE(influence)};
 
-        // Modify the output filename to include the new folder path
-        outputFilename = directoryPath + "\\" + newFolderName + "\\output_state_signals.txt";
-    } else {
-        std::cerr << "Error: Could not extract date from directory path." << std::endl;
-        return -1;
+    std::string ZTransformVariablesFileName = "z_transform_variables.csv";
+
+    // Open a file stream for writing in append mode
+    std::ofstream ZTransformVariablesOutputFile(ZTransformVariablesFileName, std::ios::app);
+
+    // Check if the file is opened successfully
+    if (!ZTransformVariablesOutputFile.is_open()) {
+        std::cerr << "Error opening file!" << std::endl;
+        return 1;
     }
 
+    // Check if the file is empty and write the header if it is
+    if (isFileEmpty(ZTransformVariablesFileName)) {
+        writeCSVHeader(ZTransformVariablesOutputFile, variableNames);
+    }
 
-    */
-    
+    // Write variables to the file in CSV format
+    ZTransformVariablesOutputFile << std::to_string(lag) << "," << std::to_string(threshold) << "," << std::to_string(influence) << std::endl;
+
+    // Close the file stream
+    ZTransformVariablesOutputFile.close();
+
+    std::cout << "Data appended to" << ZTransformVariablesFileName << " successfully." << std::endl;
+
+    // ---------------- Save Output States: --------------------------
 
     std::string outputFilename = "output_state_signals.txt";
     std::ofstream outputFile(outputFilename);
@@ -411,3 +625,5 @@ int main(int argc, char* argv[]){
     std::cout << "Output state signal is saved." << std::endl;
     return 0;
 }
+
+    */

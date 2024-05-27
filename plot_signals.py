@@ -61,13 +61,29 @@ def get_time(data):
 
 def plot_buttons_lines(time, button, button_sets, colors):
 
-    for i in range(3):
+    for i in range(len(button_sets)):
         for j in range(len(time)):
             if(button[i][j] == 1) and (not button_sets[i]):
                 plt.axvline(time[j], color=colors[i])
                 button_sets[i] = True
             if(button[i][j] == 0) and button_sets[i]:
                 button_sets[i] = False
+
+def detect_state_changes_and_write_to_file(name, lst):
+    # Open a new text file in write mode
+    with open(name, 'w') as f:
+        # Initialize variables to track the previous value and the current index
+        prev_value = lst[0]
+        for i, value in enumerate(lst):
+            # Check for a state change from 1.0 to 0.0
+            if prev_value == 1.0 and value == 0.0:
+                # Write the index of the state change to the file
+                f.write('1\n')
+            else:
+                # If no state change, write 0
+                f.write('0\n')
+            # Update the previous value for the next iteration
+            prev_value = value
 
 def main():
 
@@ -77,14 +93,26 @@ def main():
     button_keys = ['pothole_button_state', 'bump_button_state', 'mode_button_state']
     buttons = extract_data_by_keys(dataList, button_keys) # list of lists
 
+    pothole_button_presses = buttons[0]
+    bump_button_presses = buttons[1]
+
+    detect_state_changes_and_write_to_file("pothole_buttons.txt", pothole_button_presses)
+    detect_state_changes_and_write_to_file("bump_buttons.txt", bump_button_presses)
+    
+    # print(pothole_button_presses)
+
+    # exit()
+
     time_vector = get_time(buttons[0])
 
     bump_button_set = False
     pothole_button_set = False
-    mode_button_set = False 
+    # mode_button_set = False 
 
-    button_sets = [bump_button_set, pothole_button_set, mode_button_set]
-    button_colors = ['red', 'gold', 'blue']
+    # button_sets = [bump_button_set, pothole_button_set, mode_button_set]
+    button_sets = [bump_button_set, pothole_button_set]
+    # button_colors = ['red', 'gold', 'blue']
+    button_colors = ['red', 'gold']
 
     plot_buttons_lines(time_vector, buttons, button_sets, button_colors)
 
