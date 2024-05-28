@@ -1,0 +1,4 @@
+lag,threshold,influence,numberOfCorrectBumps,numberOfCorrectPotholes
+50,10,0.25,0,0
+30,5,0.25,0,0
+50,10,0.25,0,0
