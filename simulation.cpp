@@ -101,26 +101,82 @@ std::deque<double> z_score_thresholding(std::deque<double> input, int lag, doubl
     return output["signals"];
 };
 
+/*
 
+SequenceType getStateChange(const std::deque<double>& states) {
+    if (states.size() < 2) {
+        // Not enough data to detect state changes.
+        return SequenceType::Stable;
+    }
+    
+    double currentState = states[0];
+    double nextState = states[1]; // Initialize with the second state to handle transitions starting from the first sample
+    
+    for(size_t i = 1; i < states.size(); ++i){
+        // Update nextState if the current state changes
+        if(currentState != states[i]){
+            nextState = states[i];
+        }
+        
+        // Check for transitions considering intermediate states
+        if((currentState == 0 && nextState == 1) || (currentState == -1 && nextState == 1)){
+            //std::cout << "Detected rising sequence starting at: " << i << "\n";
+            return SequenceType::Rising;
+        }
+        if((currentState == 0 && nextState == -1) || (currentState == 1 && nextState == -1)){
+            //std::cout << "Detected falling sequence starting at: " << i << "\n";
+            return SequenceType::Falling;
+        }
+        
+        // Move to the next state
+        currentState = nextState;
+    }
+    
+    // If no clear rising or falling sequence is detected, consider it stable
+    return SequenceType::Stable;
+}
+*/
 
 
 SequenceType getStateChange(const std::deque<double>& states) {
     if (states.size() < 2) {
-        // std::cout << "Not enough data to detect state changes." << std::endl;
+        return SequenceType::Stable;
     }
 
-    for(size_t i = 0; i < states.size(); ++i){
-        if(i + 1 < states.size()){
-            if(states[i] == 0 && states[i + 1] == 1){
-                return SequenceType::Rising;
+    enum State { STABLE, RISING, FALLING, UNKNOWN } currentState = STABLE;
+
+    for (size_t i = 1; i < states.size(); ++i) {
+        if (currentState == STABLE) {
+            if (states[i-1] == 0) {
+                if (states[i] == 1) {
+                    currentState = RISING;
+                } else if (states[i] == -1) {
+                    currentState = FALLING;
+                }
             }
-            if(states[i] == 0 && states[i + 1] == -1){
-                return SequenceType::Falling;
+        } else if (currentState == RISING) {
+            if (states[i-1] == 1) {
+                if (states[i] == 0) {
+                    return SequenceType::Rising;
+                } else if (states[i] == -1) {
+                    currentState = FALLING;
+                }
             }
-        }        
+        } else if (currentState == FALLING) {
+            if (states[i-1] == -1) {
+                if (states[i] == 0) {
+                    return SequenceType::Falling;
+                } else if (states[i] == 1) {
+                    currentState = RISING;
+                }
+            }
+        }
     }
+
     return SequenceType::Stable;
 }
+
+
 
 inline double compoundVector(double x, double y, double z){
     return std::sqrt(x*x + y*y + z*z);
@@ -267,16 +323,33 @@ std::vector<int> getStateChangeIndices(const std::deque<int>& deque) {
 bool isValidDetection(const std::deque<int>& detectionDeque, int index, int range, int whichHazard) {
     int start = std::max(0, static_cast<int>(index) - range);
     int end = std::min(static_cast<int>(detectionDeque.size()) - 1, static_cast<int>(index) + range);
-    int stateChanges = 0;
 
-    // Check for state changes within the specified range
-    for (int i = start; i <= end; ++i) {
+    int stateChangesInRange{ 0 };
+    int stateChangesOutsideRange{ 0 };
+
+    // Iterate through the entire detection deque
+    for (int i = 1; i < detectionDeque.size(); ++i) {
+        // Check for state changes
         if ((detectionDeque[i] == whichHazard && detectionDeque[i - 1] == 0)) {
-            stateChanges++;
+            // Determine if the state change is within the specified range
+            if (i >= start && i <= end) {
+                stateChangesInRange++;
+            } else {
+                stateChangesOutsideRange++;
+            }
         }
     }
-    return (stateChanges == 1);
+
+    // return (stateChanges == 1);
+    // std::cout << "state changes in correct range: " << stateChangesInRange << std::endl;
+    // std::cout << "state changes in Incorrect range: " << stateChangesOutsideRange << std::endl;
+
+    return ((stateChangesInRange == 1) && (stateChangesOutsideRange < 30));
 }
+
+
+
+
 
 std::deque<int> convertDoubleDequeToIntDeque(const std::deque<double>& doubleDeque) {
     std::deque<int> intDeque;
@@ -286,6 +359,72 @@ std::deque<int> convertDoubleDequeToIntDeque(const std::deque<double>& doubleDeq
     return intDeque;
 }
 
+/*
+bool isValidDetection3(const std::deque<int>& detectionDeque, int index, int range, int whichHazard) {
+    int start = std::max(0, static_cast<int>(index) - range);
+    int end = std::min(static_cast<int>(detectionDeque.size()) - 1, static_cast<int>(index) + range);
+    int stateChangesInRange = 0;
+    int stateChangesOutsideRange = 0;
+
+    // Iterate through the entire detection deque
+    for (int i = 1; i < detectionDeque.size(); ++i) {
+        // Check for state changes
+        if ((detectionDeque[i] == whichHazard && detectionDeque[i - 1] == 0)) {
+
+            // Determine if the state change is within the specified range
+            if (i >= start && i <= end) {
+                stateChangesInRange++;
+            } else {
+                stateChangesOutsideRange++;
+            }
+        }
+    }   
+
+    std::cout << "state changes in range: " << stateChangesInRange << " state changes outside range: " << stateChangesOutsideRange << std::endl;
+
+    
+    *changesInRange = stateChangesInRange;
+    *changesOutsideRange = stateChangesOutsideRange;
+    
+    
+
+    // A valid detection requires exactly one state change within the range and none outside of it
+    return (stateChangesInRange > 1 && stateChangesInRange < 5) && (stateChangesOutsideRange < 10);
+}
+
+bool isValidDetection(const std::deque<int>& detectionDeque, int index, int range, int whichHazard, int* changesInRange, int* changesOutsideRange){
+    int start = std::max(0, static_cast<int>(index) - range);
+    int end = std::min(static_cast<int>(detectionDeque.size()) - 1, static_cast<int>(index) + range);
+    int stateChangesInRange = 0;
+    int stateChangesOutsideRange = 0;
+
+    // Iterate through the entire detection deque
+    for (int i = 1; i < detectionDeque.size(); ++i) {
+        // Check for state changes
+        if ((detectionDeque[i] == whichHazard && detectionDeque[i - 1] == 0)) {
+
+            // Determine if the state change is within the specified range
+            if (i >= start && i <= end) {
+                stateChangesInRange++;
+            } else {
+                stateChangesOutsideRange++;
+            }
+        }
+    }   
+
+    std::cout << "state changes in range: " << stateChangesInRange << " state changes outside range: " << stateChangesOutsideRange << std::endl;
+
+    
+    *changesInRange = stateChangesInRange;
+    *changesOutsideRange = stateChangesOutsideRange;
+    
+    
+
+    // A valid detection requires exactly one state change within the range and none outside of it
+    return (stateChangesInRange > 1 && stateChangesInRange < 5) && (stateChangesOutsideRange < 10);
+}
+
+*/
 
 
 // SIMULATION FUNCTION BEGIN
@@ -304,7 +443,7 @@ void runSimulation(unsigned int lag, double threshold, double influence, const s
 
     auto bumpIndices{ getStateChangeIndices(bumpDeque) };
     auto potholeIndices{ getStateChangeIndices(potholeDeque) };
-
+    
     // Initialize Active Filter
     ActiveFilter actFilter;
 
@@ -348,8 +487,8 @@ void runSimulation(unsigned int lag, double threshold, double influence, const s
     std::deque<double> completedData;
     completedData.clear();
 
-    std::deque<double> state;
-    state.clear();
+    std::deque<double> sequenceDeque;
+    sequenceDeque.clear();
 
     std::deque<int> stateDeque;
     stateDeque.clear();
@@ -358,8 +497,11 @@ void runSimulation(unsigned int lag, double threshold, double influence, const s
 
     std::cout << "Starting Simulation for lag=" << lag << ", threshold=" << threshold << ", influence=" << influence << std::endl;
 
-    int numberOfCorrectBumps{ 0 };
-    int numberOfCorrectPotholes{ 0 };
+    int numberOfCorrectBumpDetections{ 0 };
+    int numberOfCorrectPotholeDetections{ 0 };
+
+    int numberOfIncorrectBumpDetections{ 0 };
+    int numberOfIncorrectPotholeDetections{ 0 };
 
     // FILE LOOP BEGIN
     while (std::getline(logFile, line)) {
@@ -405,20 +547,20 @@ void runSimulation(unsigned int lag, double threshold, double influence, const s
         sampleNumber++;
 
         if (outData.size() == wholeDequeSize) {
-            state = z_score_thresholding(outData, lag, threshold, influence);
+            sequenceDeque = z_score_thresholding(outData, lag, threshold, influence);
         }
 
 
 
-        if (getStateChange(state) == SequenceType::Rising) {
+        if (getStateChange(sequenceDeque) == SequenceType::Rising) {
             stateDeque.push_back(1);
         }
 
-        if (getStateChange(state) == SequenceType::Falling) {
+        if (getStateChange(sequenceDeque) == SequenceType::Falling) {
             stateDeque.push_back(-1);
         }
 
-        if (getStateChange(state) == SequenceType::Stable) {
+        if (getStateChange(sequenceDeque) == SequenceType::Stable) {
             stateDeque.push_back(0);
         }
     }
@@ -428,22 +570,34 @@ void runSimulation(unsigned int lag, double threshold, double influence, const s
 
     // ---------------- Validation: ----------------------------------------------
 
+    unsigned int range{ 100 };
+
+    std::cout << "for bumps: " << std::endl;
     for (const auto& index : bumpIndices) {
-        bool validBumpDetection = isValidDetection(stateDeque, index, 75, 1);
-        // bool validBumpDetection = isValidDetection(convertDoubleDequeToIntDeque(state), index, 75, 1);
+
+        bool validBumpDetection = isValidDetection(stateDeque, index, range, 1);
+    
         if(validBumpDetection){
-            // std::cout << "Valid Bump Detection at Index: " << index << std::endl;
-            ++numberOfCorrectBumps;
+            ++numberOfCorrectBumpDetections;
+        }
+        else{
+            ++numberOfIncorrectBumpDetections;
         }
     }
+
+    std::cout << "for potholes: " << std::endl;
     for (const auto& index : potholeIndices) {
-        bool validPotholeDetection = isValidDetection(stateDeque, index, 75, -1);
-        // bool validPotholeDetection = isValidDetection(convertDoubleDequeToIntDeque(state), index, 75, -1);
+
+        bool validPotholeDetection = isValidDetection(stateDeque, index, range, -1);
+        
         if(validPotholeDetection){
-            // std::cout << "Valid Pothole Detection at Index: " << index << std::endl;
-            ++numberOfCorrectPotholes;
+            ++numberOfCorrectPotholeDetections;
+        }
+        else{
+            ++numberOfIncorrectPotholeDetections;
         }
     }
+
 
     // ---------------- Save Variables Used in Runtime: --------------------------
 
@@ -455,12 +609,12 @@ void runSimulation(unsigned int lag, double threshold, double influence, const s
         return;
     }
 
-    std::vector<std::string> variableNames = {"lag", "threshold", "influence", "numberOfCorrectBumps", "numberOfCorrectPotholes"};
+    std::vector<std::string> variableNames = {"lag", "threshold", "influence", "numberOfCorrectBumpDetections", "numberOfCorrectPotholeDetections", "numberOfIncorrectBumpDetections", "numberOfIncorrectPotholeDetections"}; //  "changesInRangeBump", "changesOutRangeBump", "changesInRangePot", "changesOutRangePot"};
     if (isFileEmpty(ZTransformVariablesFileName)) {
         writeCSVHeader(ZTransformVariablesOutputFile, variableNames);
     }
 
-    ZTransformVariablesOutputFile << lag << "," << threshold << "," << influence << "," << numberOfCorrectBumps << "," << numberOfCorrectPotholes << std::endl;
+    ZTransformVariablesOutputFile << std::to_string(lag) << "," << std::to_string(threshold) << "," << std::to_string(influence)  << "," << std::to_string(numberOfCorrectBumpDetections)  << "," <<  std::to_string(numberOfCorrectPotholeDetections)  << "," << std::to_string(numberOfIncorrectBumpDetections) << "," << std::to_string(numberOfIncorrectPotholeDetections)  << std::endl; // << "," << changes_in_range_bump << "," << changes_out_range_bump << "," << changes_in_range_pot << "," << changes_out_range_pot << std::endl;
     ZTransformVariablesOutputFile.close();
 
     
@@ -484,6 +638,12 @@ void runSimulation(unsigned int lag, double threshold, double influence, const s
 }
 // SIMULATION FUNCTION END
 
+
+
+
+
+
+
 int main(int argc, char* argv[]){
 
     if (argc != 2) {
@@ -493,19 +653,20 @@ int main(int argc, char* argv[]){
 
     std::string directoryPath = argv[1];
 
-    runSimulation(lag, threshold, influence, directoryPath);
 
-    return 0;
+    // runSimulation(55, 7, influence, directoryPath);
 
-    for (unsigned int lag = 30; lag <= 70; lag += 5) {
-        for (double threshold = 0.0; threshold <= 30.0; threshold += 5.0) {
+    // return 0;
+
+    // ------------------------------------------------------------
+
+    for (unsigned int lag = 40; lag <= 60; lag += 2) {
+        for (double threshold = 7.0; threshold <= 20.0; threshold += 1.0) {
             //for (double influence = 0.0; influence <= 0.5; influence += 0.1) { // influence does not matter
                 runSimulation(lag, threshold, influence, directoryPath);
             //}
         }
     }
-    
-    
 
     std::cout << "All simulations completed." << std::endl;
 
