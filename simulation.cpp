@@ -706,6 +706,15 @@ int main(int argc, char* argv[]){
     auto bumpIndices{ getStateChangeIndices(bumpDeque) };
     auto potholeIndices{ getStateChangeIndices(potholeDeque) };
 
+    /*
+    for(double bumpThres = 1.5; bumpThres <= 2.1; bumpThres += 0.1){
+        for(double potholeThres = 1.5; potholeThres <= 2.1; potholeThres += 0.1){
+            runSimulation(lag, z_score_threshold, influence, directoryPath, bumpIndices, potholeIndices, bumpThres, potholeThres);
+        }
+    }
+    */
+    
+
     runSimulation(lag, z_score_threshold, influence, directoryPath, bumpIndices, potholeIndices);
 
     /*
