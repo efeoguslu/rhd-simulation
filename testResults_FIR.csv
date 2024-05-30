@@ -1,0 +1,2 @@
+lag,zScoreThreshold,influence,numberOfBumps,numberOfCorrectBumpDetections,numberOfIncorrectBumpDetections,numberOfPotholes,numberOfCorrectPotholeDetections,numberOfIncorrectPotholeDetections,bumpDetectionSuccess,potholeDetectionSuccess
+50, 10.000000, 0.250000, 21, 18, 3, 8, 4, 4, 85.714286, 50.000000
