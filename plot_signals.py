@@ -96,8 +96,8 @@ def main():
     pothole_button_presses = buttons[0]
     bump_button_presses = buttons[1]
 
-    detect_state_changes_and_write_to_file("pothole_buttons.txt", pothole_button_presses)
-    detect_state_changes_and_write_to_file("bump_buttons.txt", bump_button_presses)
+    #detect_state_changes_and_write_to_file("pothole_buttons.txt", pothole_button_presses)
+    #detect_state_changes_and_write_to_file("bump_buttons.txt", bump_button_presses)
     
     # print(pothole_button_presses)
 
