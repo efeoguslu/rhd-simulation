@@ -307,7 +307,7 @@ bool isValidDetection(const std::deque<int>& detectionDeque, int index, int rang
     // std::cout << "state changes in correct range: " << stateChangesInRange << std::endl;
     // std::cout << "state changes in Incorrect range: " << stateChangesOutsideRange << std::endl;
 
-    return (((stateChangesInRange < 3) && (stateChangesInRange > 0)) && (stateChangesOutsideRange < 10));
+    return ((stateChangesInRange < 3) && (stateChangesInRange > 0));
 }
 
 
@@ -586,7 +586,7 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
     }
 
     //ZTransformVariablesOutputFile << std::to_string(lag) << "," << std::to_string(threshold) << "," << std::to_string(influence)  << "," << std::to_string(numberOfCorrectBumpDetections)  << "," <<  std::to_string(numberOfCorrectPotholeDetections)  << "," << std::to_string(numberOfIncorrectBumpDetections) << "," << std::to_string(numberOfIncorrectPotholeDetections)  << std::endl; // << "," << changes_in_range_bump << "," << changes_out_range_bump << "," << changes_in_range_pot << "," << changes_out_range_pot << std::endl;
-    testResultsOutputFile << std::to_string(lag) << "," << std::to_string(z_score_threshold) << "," << std::to_string(influence)  << "," << std::to_string(bumpIndices.size()) << "," << std::to_string(numberOfCorrectBumpDetections)  << "," << std::to_string(numberOfIncorrectBumpDetections) << "," << std::to_string(potholeIndices.size()) << "," <<  std::to_string(numberOfCorrectPotholeDetections) << "," << std::to_string(numberOfIncorrectPotholeDetections) << "," << std::to_string((static_cast<double>(numberOfCorrectBumpDetections)/bumpIndices.size())*100) << "," << std::to_string((static_cast<double>(numberOfCorrectPotholeDetections)/potholeIndices.size())*100) << "," << std::to_string(filterThreshold) << "," << std::to_string(positiveCoef) << "," << std::to_string(negativeCoef) << std::endl; 
+    testResultsOutputFile << std::to_string(lag) << ", " << std::to_string(z_score_threshold) << ", " << std::to_string(influence)  << ", " << std::to_string(bumpIndices.size()) << ", " << std::to_string(numberOfCorrectBumpDetections)  << ", " << std::to_string(numberOfIncorrectBumpDetections) << ", " << std::to_string(potholeIndices.size()) << ", " <<  std::to_string(numberOfCorrectPotholeDetections) << ", " << std::to_string(numberOfIncorrectPotholeDetections) << ", " << std::to_string((static_cast<double>(numberOfCorrectBumpDetections)/bumpIndices.size())*100) << ", " << std::to_string((static_cast<double>(numberOfCorrectPotholeDetections)/potholeIndices.size())*100) << ", " << std::to_string(filterThreshold) << ", " << std::to_string(positiveCoef) << ", " << std::to_string(negativeCoef) << std::endl; 
     testResultsOutputFile.close();
 
     
@@ -639,8 +639,31 @@ int main(int argc, char* argv[]){
     double positiveCoef{ 1.4 };
     double negativeCoef{ 0.4 };
 
-    runSimulation(lag, z_score_threshold, influence, activeFilterThreshold, positiveCoef, negativeCoef, directoryPath, bumpIndices, potholeIndices);
+    // bump için bunu:
+    // runSimulation(50, 10, 0.25, 0.19, 1.7, 0.7, directoryPath, bumpIndices, potholeIndices);
+
+    // pothole için bu:
+    // 50, 10, 0.25, 0.18, 1.9, 0.1 
+    runSimulation(50, 10, 0.25, 0.18, 1.9, 0.1, directoryPath, bumpIndices, potholeIndices);
+
+    return 0;
+
+    // bump detection maximize:
+    /*
+    lag, z-score-thres, and influence are fixed. 50-10-0.25
+
     
+
+    for(double activeFilterThreshold = 0.19; activeFilterThreshold <= 0.21; activeFilterThreshold += 0.01){
+        for(double positiveCoef = 1.2; positiveCoef <= 2.1; positiveCoef += 0.1){
+            for(double negativeCoef = 0.4; negativeCoef <= 0.9; negativeCoef += 0.1){
+                runSimulation(50, 10.0, 0.25, activeFilterThreshold, positiveCoef, negativeCoef, directoryPath, bumpIndices, potholeIndices);
+            }
+        }
+    }
+    */
+    //runSimulation(lag, z_score_threshold, influence, activeFilterThreshold, positiveCoef, negativeCoef, directoryPath, bumpIndices, potholeIndices);
+    std::cout << "All simulations completed." << std::endl;
     return 0;
 
     /*
