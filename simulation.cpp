@@ -152,8 +152,6 @@ void rotateAll(double rollAngle, double pitchAngle, double x, double y, double z
 }
 
 
-// dt işini çöz:
-
 void complementaryFilter(double ax, double ay, double az, double gr, double gp, double gy, double* rollAngle, double* pitchAngle) {
     static double accel_angle[2] = {0.0, 0.0};
     static double gyro_angle[3] = {0.0, 0.0, 0.0};
@@ -271,6 +269,24 @@ std::deque<int> readFileIntoDeque(std::string filename) {
     return numbers;
 }
 
+template<typename T>
+void saveDequeIntoFile(const std::deque<T>& deque, std::string name){
+    
+    std::string outputFileName = name + ".txt";
+    std::ofstream outputFile(outputFileName);
+
+    if (!outputFile.is_open()) {
+        std::cerr << "Failed to open " << outputFileName << std::endl;
+        return;
+    }
+
+    for (const auto& signal : deque) {
+        outputFile << signal << "\n";
+    }
+
+    outputFile.close();
+}
+
 
 std::vector<int> getStateChangeIndices(const std::deque<int>& deque) {
     std::vector<int> indices;
@@ -283,30 +299,6 @@ std::vector<int> getStateChangeIndices(const std::deque<int>& deque) {
 }
 
 
-/*
-bool isValidDetection(const std::deque<int>& detectionDeque, int index, int range, int whichHazard) {
-    int start = std::max(0, static_cast<int>(index) - range);
-    int end = std::min(static_cast<int>(detectionDeque.size()) - 1, static_cast<int>(index) + range);
-
-    int stateChangesInRange{ 0 };
-    int stateChangesOutsideRange{ 0 };
-
-    // Iterate through the entire detection deque
-    for (int i = 1; i < detectionDeque.size(); ++i) {
-        // Check for state changes
-        if (((detectionDeque[i] == whichHazard) && (detectionDeque[i - 1] == 0))) {
-            // Determine if the state change is within the specified range
-            if (i >= start && i <= end) {
-                stateChangesInRange++;
-            } else {
-                stateChangesOutsideRange++;
-            }
-        }
-    }
-    return ((stateChangesInRange < 3) && (stateChangesInRange > 0));
-}
-
-*/
 
 bool isValidDetection(const std::deque<int>& detectionDeque, int index, int range, int whichHazard) {
     int start = std::max(0, static_cast<int>(index) - range);
@@ -334,73 +326,6 @@ std::deque<int> convertDoubleDequeToIntDeque(const std::deque<double>& doubleDeq
     }
     return intDeque;
 }
-
-/*
-bool isValidDetection3(const std::deque<int>& detectionDeque, int index, int range, int whichHazard) {
-    int start = std::max(0, static_cast<int>(index) - range);
-    int end = std::min(static_cast<int>(detectionDeque.size()) - 1, static_cast<int>(index) + range);
-    int stateChangesInRange = 0;
-    int stateChangesOutsideRange = 0;
-
-    // Iterate through the entire detection deque
-    for (int i = 1; i < detectionDeque.size(); ++i) {
-        // Check for state changes
-        if ((detectionDeque[i] == whichHazard && detectionDeque[i - 1] == 0)) {
-
-            // Determine if the state change is within the specified range
-            if (i >= start && i <= end) {
-                stateChangesInRange++;
-            } else {
-                stateChangesOutsideRange++;
-            }
-        }
-    }   
-
-    std::cout << "state changes in range: " << stateChangesInRange << " state changes outside range: " << stateChangesOutsideRange << std::endl;
-
-    
-    *changesInRange = stateChangesInRange;
-    *changesOutsideRange = stateChangesOutsideRange;
-    
-    
-
-    // A valid detection requires exactly one state change within the range and none outside of it
-    return (stateChangesInRange > 1 && stateChangesInRange < 5) && (stateChangesOutsideRange < 10);
-}
-
-bool isValidDetection(const std::deque<int>& detectionDeque, int index, int range, int whichHazard, int* changesInRange, int* changesOutsideRange){
-    int start = std::max(0, static_cast<int>(index) - range);
-    int end = std::min(static_cast<int>(detectionDeque.size()) - 1, static_cast<int>(index) + range);
-    int stateChangesInRange = 0;
-    int stateChangesOutsideRange = 0;
-
-    // Iterate through the entire detection deque
-    for (int i = 1; i < detectionDeque.size(); ++i) {
-        // Check for state changes
-        if ((detectionDeque[i] == whichHazard && detectionDeque[i - 1] == 0)) {
-
-            // Determine if the state change is within the specified range
-            if (i >= start && i <= end) {
-                stateChangesInRange++;
-            } else {
-                stateChangesOutsideRange++;
-            }
-        }
-    }   
-
-    std::cout << "state changes in range: " << stateChangesInRange << " state changes outside range: " << stateChangesOutsideRange << std::endl;
-
-    
-    *changesInRange = stateChangesInRange;
-    *changesOutsideRange = stateChangesOutsideRange;
-    
-    
-
-    // A valid detection requires exactly one state change within the range and none outside of it
-    return (stateChangesInRange > 1 && stateChangesInRange < 5) && (stateChangesOutsideRange < 10);
-}
-
-*/
 
 
 // SIMULATION FUNCTION BEGIN
@@ -476,6 +401,10 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
     // Variable to store the compound acceleration vector:
     double compoundAccelerationVector{ 0.0 };
 
+    // Deque to store the filtered acceleration vector:
+    std::deque<double> filteredVectorDeque;
+    filteredVectorDeque.clear();
+
     int sampleNumber{ 0 };
     const unsigned int wholeDequeSize{ 150 };
     unsigned int removeBumpSamples{ 0 };
@@ -485,7 +414,6 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
     outBumpData.clear();
     std::deque<double> outPotholeData;
     outPotholeData.clear();
-
 
     std::deque<double> completedData;
     completedData.clear();
@@ -529,11 +457,23 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
             }
         }
 
-        //ThreeAxisIIR_Update(&iirFiltAccel, ax, ay, az, &ax_filtered, &ay_filtered, &az_filtered);
-        //ThreeAxisIIR_Update(&iirFiltGyro, gr, gp, gy, &gr_filtered, &gp_filtered, &gy_filtered);
+        ThreeAxisIIR_Update(&iirFiltAccel, ax, ay, az, &ax_filtered, &ay_filtered, &az_filtered);
+        ThreeAxisIIR_Update(&iirFiltGyro, gr, gp, gy, &gr_filtered, &gp_filtered, &gy_filtered);
 
-        ThreeAxisFIR_Update(&firFiltAccel, ax, ay, az, &ax_filtered, &ay_filtered, &az_filtered);
-        ThreeAxisFIR_Update(&firFiltGyro, gr, gp, gy, &gr_filtered, &gp_filtered, &gy_filtered);
+        filteredVectorDeque.push_back(compoundVector(ax_filtered, ay_filtered, az_filtered));
+
+        // ThreeAxisFIR_Update(&firFiltAccel, ax, ay, az, &ax_filtered, &ay_filtered, &az_filtered);
+        // ThreeAxisFIR_Update(&firFiltGyro, gr, gp, gy, &gr_filtered, &gp_filtered, &gy_filtered);
+
+        /*
+        ax_filtered = ax;
+        ay_filtered = ay;
+        az_filtered = az;
+        gr_filtered = gr;
+        gp_filtered = gp;
+        gy_filtered = gy;
+        */
+        
 
         complementaryFilter(ax_filtered, ay_filtered, az_filtered, gr_filtered, gp_filtered, gy_filtered, &rollAngle, &pitchAngle);
 
@@ -567,8 +507,6 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
             outPotholeData.erase(outPotholeData.begin(), outPotholeData.begin() + removePotholeSamples);
         }
 
-        sampleNumber++;
-
         if (outBumpData.size() == wholeDequeSize) {
             sequenceBumpDeque = z_score_thresholding(outBumpData, lag, z_score_threshold, influence);
         }
@@ -598,6 +536,7 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
         if (getStateChange(sequencePotholeDeque) == SequenceType::Stable) {
             statePotholeDeque.push_back(0);
         }
+        sampleNumber++;
     }
 
     // FILE LOOP END
@@ -611,7 +550,6 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
 
     // std::cout << "for bumps: " << std::endl;
     for (const auto& index : bumpIndices) {
-
         bool validBumpDetection = isValidDetection(stateBumpDeque, index, range, 1);
     
         if(validBumpDetection){
@@ -622,9 +560,9 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
         }
     }
 
+
     // std::cout << "for potholes: " << std::endl;
     for (const auto& index : potholeIndices) {
-
         bool validPotholeDetection = isValidDetection(statePotholeDeque, index, range, -1);
         
         if(validPotholeDetection){
@@ -659,26 +597,11 @@ void runSimulation(unsigned int lag, double z_score_threshold, double influence,
     
     // Save the output state changes:
 
-    /*
-    std::string outputStateFileName = "output_state_signals.txt";
-    std::ofstream outputStateFile(outputStateFileName);
+    saveDequeIntoFile(stateBumpDeque, "bump_state_signal");
+    saveDequeIntoFile(statePotholeDeque, "pothole_state_signal");
 
-    if (!outputStateFile.is_open()) {
-        std::cerr << "Failed to open " << outputStateFileName << std::endl;
-        return;
-    }
-
-    for (const auto& signal : stateDeque) {
-        outputStateFile << signal << "\n";
-    }
-
-    outputStateFile.close();
-    
-    */
-
-    
-    
-    
+    // Save the filtered vector:
+    saveDequeIntoFile(filteredVectorDeque, "filtered_signal");
 
     std::cout << "Simulation for lag=" << lag << ", threshold=" << z_score_threshold << ", influence=" << influence << " completed." << std::endl;
 }

@@ -15,7 +15,9 @@ def load_data(filename):
     return np.loadtxt(filename)
 
 def plot_data(x, y, label):
-    plt.plot(x, y, label=label)
+    fig, ax = plt.subplots()
+    ax.plot(x, y, label=label)
+    ax.legend()
 
 def update_target_folder_path():
 
@@ -124,22 +126,24 @@ def main():
     # Load data from the second file
     # // y2 = load_data('output_signals.txt')
 
-    y3 = load_data('output_state_signals.txt')
+    bump = load_data('bump_state_signal.txt')
+    pothole = load_data('pothole_state_signal.txt')
+
+    filtered_signal = load_data('filtered_signal.txt')
+
 
     # Generate x values based on the length of y1 and y2
     # x1 = np.arange(len(y1))
     # x2 = np.arange(len(y2))
-    x3 = np.arange(len(y3))
+    x3 = np.arange(len(bump))
+    x4 = np.arange(len(pothole))
 
     # Plot both datasets
     # plot_data(x1, y1, "acceleration")
     # plot_data(x2, y2, "peak detection") # Bunu şimdilik kullanma
-    plot_data(time_vector, y3, "state detection")
+    plot_data(time_vector, bump, "bump state")
+    plot_data(time_vector, pothole, "pothole state")
 
-
-    # Customize the plot
-    plt.xlabel('X Axis Label')
-    plt.ylabel('Y Axis Label')
     # plt.title('Title of the Graph')
     plt.legend()
 
