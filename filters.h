@@ -6,6 +6,7 @@
 #include <deque>
 #include <iostream>
 #include <fstream>
+#include <cmath>
 
 typedef struct{
     double alpha;
@@ -18,6 +19,9 @@ typedef struct {
     FirstOrderIIR z;
 } ThreeAxisIIR;
 
+const double pi{ 3.14159265359 };
+
+
 void FirstOrderIIR_Init(FirstOrderIIR *filt, double alpha);
 double FirstOrderIIR_Update(FirstOrderIIR *filt, double in);
 
@@ -25,7 +29,9 @@ void ThreeAxisIIR_Init(ThreeAxisIIR *filt, double alpha);
 void ThreeAxisIIR_Update(ThreeAxisIIR *filt, double in_x, double in_y, double in_z, double *out_x, double *out_y, double *out_z);
 
 
-#define FIR_FILTER_LENGTH (16)
+// --------------------------------------------------------------------------------------------------
+/*
+#define FIR_FILTER_LENGTH (105)
 
 typedef struct{
     float buf[FIR_FILTER_LENGTH]; // circular buffer
@@ -45,6 +51,38 @@ double FIRFilter_Update(FIRFilter *fir, double inp);
 void ThreeAxisFIR_Init(ThreeAxisFIR *filt);
 void ThreeAxisFIR_Update(ThreeAxisFIR *filt, double in_x, double in_y, double in_z, double *out_x, double *out_y, double *out_z);
 
+
+*/
+
+// --------------------------------------------------------------------------------------------------
+
+// FIR Filter class
+class FIRFilter {
+public:
+    FIRFilter(const std::deque<double>& coefficients) : coefficients(coefficients), buffer(coefficients.size(), 0.0) {}
+
+    double update(double newSample) {
+        // Add new sample to the buffer
+        buffer.pop_front();
+        buffer.push_back(newSample);
+
+        // Apply the filter
+        double filteredValue = 0.0;
+        for (size_t i = 0; i < coefficients.size(); ++i) {
+            filteredValue += coefficients[i] * buffer[i];
+        }
+
+        return filteredValue;
+    }
+
+private:
+    std::deque<double> coefficients;
+    std::deque<double> buffer;
+};
+
+
+std::deque<double> designFIRFilter(int numTaps, double cutoffFrequency, double samplingRate);
+void ThreeAxisFIR_Update(FIRFilter& filter, double ax, double ay, double az, double& ax_filtered, double& ay_filtered, double& az_filtered);
 
 
 
