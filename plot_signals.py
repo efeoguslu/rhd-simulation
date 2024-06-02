@@ -145,25 +145,26 @@ def main():
     # y1 = load_data('ulas1_active_filtered_vec.txt')
 
     # Load data from the second file
-    # // y2 = load_data('output_signals.txt')
+    y2 = load_data('output_state_signals.txt')
 
-    bump = load_data('bump_state_signal.txt')
-    pothole = load_data('pothole_state_signal.txt')
+    #bump = load_data('bump_state_signal.txt')
+    #pothole = load_data('pothole_state_signal.txt')
 
     filtered_signal = load_data('filtered_signal.txt')
 
 
     # Generate x values based on the length of y1 and y2
     # x1 = np.arange(len(y1))
-    # x2 = np.arange(len(y2))
-    x3 = np.arange(len(bump))
-    x4 = np.arange(len(pothole))
+    x2 = np.arange(len(y2))
+    #x3 = np.arange(len(bump))
+    #x4 = np.arange(len(pothole))
 
     # Plot both datasets
     # plot_data(x1, y1, "acceleration")
-    # plot_data(x2, y2, "peak detection") # Bunu şimdilik kullanma
-    plot_data(time_vector, bump, "bump state")
-    plot_data(time_vector, pothole, "pothole state")
+    
+    plot_data(x2, y2, "peak detection") # Bunu şimdilik kullanma
+    #plot_data(time_vector, bump, "bump state")
+    #plot_data(time_vector, pothole, "pothole state")
 
     # plt.title('Title of the Graph')
     plt.legend()
