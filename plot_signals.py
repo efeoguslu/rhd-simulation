@@ -14,8 +14,9 @@ fig, ax1 = plt.subplots()
 def load_data(filename):
     return np.loadtxt(filename)
 
-def plot_data(x, y, label):
-    fig, ax = plt.subplots()
+def plot_data(x, y, label, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
     ax.plot(x, y, label=label)
     ax.legend()
 
@@ -118,31 +119,25 @@ def main():
 
     plot_buttons_lines(time_vector, buttons, button_sets, button_colors)
 
-    y3 = load_data('output_state_signals.txt')
+    #y3 = load_data('output_state_signals.txt')
 
     # Generate x values based on the length of y1 and y2
     # x1 = np.arange(len(y1))
     # x2 = np.arange(len(y2))
-    x3 = np.arange(len(y3))
+
+    
+    #x3 = np.arange(len(y3))
 
     # Plot both datasets
     # plot_data(x1, y1, "acceleration")
     # plot_data(x2, y2, "peak detection") # Bunu şimdilik kullanma
-    plot_data(time_vector, y3, "state detection")
 
 
-    # Customize the plot
-    plt.xlabel('X Axis Label')
-    plt.ylabel('Y Axis Label')
-    # plt.title('Title of the Graph')
-    plt.legend()
-
-    # Show the plot
-    plt.show()
+    #plot_data(time_vector, y3, "state detection")
 
 
 
-    exit()
+
 
     ## SONRA KULLANACAKSIN: TESPİTLERİ AYIRINCA:
 
