@@ -58,6 +58,7 @@
         "typeinfo": "cpp",
         "filesystem": "cpp",
         "map": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "optional": "cpp"
     }
 }
