@@ -1,0 +1,10 @@
+lag,zScoreThreshold,influence,bumpPressCount,correctBumpDetections,incorrectBumpDetections,potholePressCount,correctPotholeDetections,incorrectPotholeDetections,bumpDetectionSuccess,potholeDetectionSuccess,bumpFalsePositives,potholeFalsePositives,activeFilterThreshold,activeFilterPosCoef,activeFilterNegCoef,activeFilterThresholdBump,activeFilterPosCoefBump,activeFilterNegCoefBump,activeFilterThresholdPothole,activeFilterPosCoefPothole,activeFilterNegCoefPothole
+50, 10.000000, 0.250000, 21, 7, 14, 8, 0, 8, 33.333333, 0.000000, -7, 0, 0.100000, 1.600000, 1.100000
+50, 10.000000, 0.250000, 21, 9, 12, 8, 7, 1, 42.857143, 87.500000, -9, -7, 0.100000, 1.600000, 0.100000
+50, 10.000000, 0.250000, 21, 7, 14, 8, 0, 8, 33.333333, 0.000000, -7, 0, 0.150000, 1.100000, 0.700000
+50, 6.000000, 0.250000, 21, 19, 2, 8, 1, 7, 90.476190, 12.500000, -19, -1, 0.150000, 1.100000, 0.700000
+50, 6.000000, 0.250000, 21, 19, 2, 8, 1, 7, 90.476190, 12.500000, -19, -1, 0.150000, 1.100000, 0.700000
+50, 10.000000, 0.250000, 21, 6, 15, 8, 5, 3, 28.571429, 62.500000, 1, 19, 0.180000, 1.300000, 0.900000, 0.130000, 1.800000, 0.200000
+50, 10.000000, 0.250000, 21, 19, 2, 8, 7, 1, 90.476190, 87.500000, 4, 17, 0.180000, 1.300000, 0.900000, 0.130000, 1.800000, 0.200000
+50, 10.000000, 0.250000, 21, 19, 2, 8, 7, 1, 90.476190, 87.500000, 4, 26, 0.180000, 1.300000, 0.900000, 0.130000, 1.800000, 0.100000
+50, 10.000000, 0.250000, 21, 19, 2, 8, 7, 1, 90.476190, 87.500000, 4, 26, 0.180000, 1.300000, 0.900000, 0.130000, 1.800000, 0.100000

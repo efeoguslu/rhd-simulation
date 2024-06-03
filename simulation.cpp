@@ -15,15 +15,14 @@
 #include <unordered_map>
 #include <iterator>
 #include <numeric>
+#include <iomanip>
 
 #include <sys/stat.h>
 
 #include "filters.h"
 #include "sequence.h" 
 
-// Peak Detection:
-typedef unsigned int uint;
-typedef std::deque<double>::iterator deque_iter_double;
+
 
 const unsigned int lag{ 50 };
 const double z_score_threshold{ 10.0 };
@@ -46,6 +45,17 @@ const double cutoffFrequency{ 4 };
 
 #define CSV_LINE(variable) #variable
 
+// Struct to hold sensor data
+struct SensorData{
+    double ax, ay, az;
+    double gr, gp, gy;
+};
+
+/*
+
+// Peak Detection:
+typedef unsigned int uint;
+typedef std::deque<double>::iterator deque_iter_double;
 class VectorStats {
 public:
     VectorStats(deque_iter_double start, deque_iter_double end) {
@@ -115,47 +125,168 @@ std::deque<double> z_score_thresholding(std::deque<double> input, int lag, doubl
 
     return output["signals"];
 };
+*/
 
 /*
-SequenceType getStateChange(const std::deque<double>& states) {
-    if (states.size() < 2) {
-        return SequenceType::Stable;
+typedef unsigned int uint;
+using deque_iter_double = std::deque<double>::iterator;
+
+class VectorStats {
+public:
+    VectorStats(deque_iter_double start, deque_iter_double end) {
+        this->start = start;
+        this->end = end;
+        this->compute();
     }
 
-    enum State { STABLE, RISING, FALLING, UNKNOWN } currentState = STABLE;
+    void compute() {
+        double sum = std::accumulate(start, end, 0.0);
+        uint slice_size = std::distance(start, end);
+        double mean = sum / slice_size;
+        std::vector<double> diff(slice_size);
+        std::transform(start, end, diff.begin(), [mean](double x) { return x - mean; });
+        double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+        double std_dev = std::sqrt(sq_sum / slice_size);
 
-    for (size_t i = 1; i < states.size(); ++i) {
-        if (currentState == STABLE) {
-            if (states[i-1] == 0) {
-                if (states[i] == 1) {
-                    currentState = RISING;
-                } else if (states[i] == -1) {
-                    currentState = FALLING;
-                }
-            }
-        } else if (currentState == RISING) {
-            if (states[i-1] == 1) {
-                if (states[i] == 0) {
-                    return SequenceType::Rising;
-                } else if (states[i] == -1) {
-                    currentState = FALLING;
-                }
-            }
-        } else if (currentState == FALLING) {
-            if (states[i-1] == -1) {
-                if (states[i] == 0) {
-                    return SequenceType::Falling;
-                } else if (states[i] == 1) {
-                    currentState = RISING;
-                }
-            }
+        this->m1 = mean;
+        this->m2 = std_dev;
+    }
+
+    double mean() const {
+        return m1;
+    }
+
+    double standard_deviation() const {
+        return m2;
+    }
+
+private:
+    deque_iter_double start;
+    deque_iter_double end;
+    double m1;
+    double m2;
+};
+
+std::deque<double> z_score_thresholding(std::deque<double> input, int lag, double threshold, double influence) {
+    uint n = static_cast<uint>(input.size());
+    std::deque<double> signals(n, 0.0);
+    std::deque<double> filtered_input = input;
+    std::deque<double> filtered_mean(n);
+    std::deque<double> filtered_stddev(n);
+
+    VectorStats lag_subvector_stats(input.begin(), input.begin() + lag);
+    filtered_mean[lag - 1] = lag_subvector_stats.mean();
+    filtered_stddev[lag - 1] = lag_subvector_stats.standard_deviation();
+
+    double sum = std::accumulate(input.begin(), input.begin() + lag, 0.0);
+    double sum_sq = std::inner_product(input.begin(), input.begin() + lag, input.begin(), 0.0);
+
+    for (int i = lag; i < n; i++) {
+        double mean = sum / lag;
+        double variance = (sum_sq / lag) - (mean * mean);
+        double std_dev = std::sqrt(variance);
+
+        if (std::abs(input[i] - mean) > threshold * std_dev) {
+            signals[i] = (input[i] > mean) ? 1.0 : -1.0;
+            filtered_input[i] = influence * input[i] + (1 - influence) * filtered_input[i - 1];
+        } else {
+            signals[i] = 0.0;
+            filtered_input[i] = input[i];
         }
+
+        // Update the sum and sum of squares incrementally
+        sum += filtered_input[i] - filtered_input[i - lag];
+        sum_sq += filtered_input[i] * filtered_input[i] - filtered_input[i - lag] * filtered_input[i - lag];
     }
 
-    return SequenceType::Stable;
+    return signals;
 }
 
+
 */
+
+using deque_iter_double = std::deque<double>::iterator;
+using uint = unsigned int;
+
+class VectorStats {
+public:
+    VectorStats(deque_iter_double start_iterator, deque_iter_double end_iterator) {
+        this->start = start_iterator;
+        this->end = end_iterator;
+        this->compute();
+    }
+
+    void compute() {
+        double sum = std::accumulate(start, end, 0.0);
+        uint slice_size = std::distance(start, end);
+        double mean = sum / slice_size;
+        std::vector<double> diff(slice_size);
+        std::transform(start, end, diff.begin(), [mean](double x) { return x - mean; });
+        double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+        double std_dev = std::sqrt(sq_sum / slice_size);
+
+        this->m1 = mean;
+        this->m2 = std_dev;
+    }
+
+    double mean() const {
+        return m1;
+    }
+
+    double standard_deviation() const {
+        return m2;
+    }
+
+private:
+    deque_iter_double start;
+    deque_iter_double end;
+    double m1;
+    double m2;
+};
+
+std::deque<double> z_score_thresholding(std::deque<double> input, int lag, double threshold, double influence) {
+    uint n = static_cast<uint>(input.size());
+    std::deque<double> signals(n, 0.0);
+    std::deque<double> filtered_input = input;
+    std::deque<double> filtered_mean(n);
+    std::deque<double> filtered_stddev(n);
+
+    VectorStats lag_subvector_stats(input.begin(), input.begin() + lag);
+    filtered_mean[lag - 1] = lag_subvector_stats.mean();
+    filtered_stddev[lag - 1] = lag_subvector_stats.standard_deviation();
+
+    double sum = std::accumulate(input.begin(), input.begin() + lag, 0.0);
+    double sum_sq = std::inner_product(input.begin(), input.begin() + lag, input.begin(), 0.0);
+
+    for (int i = lag; i < n; i++) {
+        double mean = sum / lag;
+        double variance = (sum_sq / lag) - (mean * mean);
+        double std_dev = std::sqrt(variance);
+
+        if (std::abs(input[i] - mean) > threshold * std_dev) {
+            signals[i] = (input[i] > mean) ? 1.0 : -1.0;
+            filtered_input[i] = influence * input[i] + (1 - influence) * filtered_input[i - 1];
+        } else {
+            signals[i] = 0.0;
+            filtered_input[i] = input[i];
+        }
+
+        // Update the sum and sum of squares incrementally
+        sum += filtered_input[i] - filtered_input[i - lag];
+        sum_sq += filtered_input[i] * filtered_input[i] - filtered_input[i - lag] * filtered_input[i - lag];
+
+        // Update the filtered mean and standard deviation
+        filtered_mean[i] = mean;
+        filtered_stddev[i] = std_dev;
+    }
+
+    return signals;
+}
+
+
+
+
+
 
 SequenceType getStateChange(const std::deque<double>& states) {
     if (states.size() < 2) {
@@ -383,32 +514,6 @@ inline int countStateChangesFromMinus1to0(const std::deque<int>& stateDeque) {
     return stateChangesCount;
 }
 
-
-
-/*
-inline bool isValidDetection(const std::deque<int>& detectionDeque, const std::vector<int>& indices, int range, int whichHazard) {
-    int stateChangesInRange{ 0 };
-    int stateChangesOutRange{ 0 };
-
-    for (const auto& index : indices) {
-        int start = std::max(0, static_cast<int>(index) - range);
-        int end = std::min(static_cast<int>(detectionDeque.size()) - 1, static_cast<int>(index) + range);
-
-        for (int i = start + 1; i <= end; ++i) {
-            if (((detectionDeque[i] == whichHazard) && (detectionDeque[i - 1] == 0))) {
-                stateChangesInRange++;
-            }
-            else{
-                stateChangesOutRange++;
-            }
-        }
-    }
-
-    return (stateChangesInRange == 1);
-}
-*/
-
-
 std::deque<int> convertDoubleDequeToIntDeque(const std::deque<double>& doubleDeque) {
     std::deque<int> intDeque;
     for (const auto& value : doubleDeque) {
@@ -417,244 +522,45 @@ std::deque<int> convertDoubleDequeToIntDeque(const std::deque<double>& doubleDeq
     return intDeque;
 }
 
-/*
-
-*/
 
 
-
-
-
-
-/*
-void runSimulation(const std::string& directoryPath, unsigned int lag, double z_score_threshold, double influence, const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices) {
-    std::string logFileName = "allSensorLogFile.txt";
-    std::string logFilePath = directoryPath + "/" + logFileName;
-
-    std::ifstream logFile(logFilePath);
-    if (!logFile.is_open()) {
-        std::cerr << "Error: Unable to open log file." << std::endl;
-        return;
+template<typename T>
+void appendIfNotEmpty(const T& filterConfigured, std::deque<double>& output1, std::deque<double>& output2) {
+    if (filterConfigured.getCompletedDataSize() > 0) {
+        std::deque<double> completedData = filterConfigured.getCompletedData();
+        AppendDeque(output1, completedData);
+        AppendDeque(output2, completedData);
     }
-
-    std::vector<std::string> logLines;
-    std::string line;
-    while (std::getline(logFile, line)) {
-        logLines.push_back(line);
-    }
-    logFile.close();
-
-    // Initialization
-    int activeFilterWindowSize = 50;
-    int activeFilterOverlapSize = 35;
-
-    double bumpActiveFilterThreshold = 0.19;
-    double bumpActiveFilterPositiveCoef = 1.7;
-    double bumpActiveFilterNegativeCoef = 0.7;
-
-    double potholeActiveFilterThreshold = 0.18;
-    double potholeActiveFilterPositiveCoef = 1.9;
-    double potholeActiveFilterNegativeCoef = 0.1;
-
-    ActiveFilter actFilterBumpConfigured;
-    actFilterBumpConfigured.setWindowParameters(activeFilterWindowSize, activeFilterOverlapSize);
-    actFilterBumpConfigured.setThreshold(bumpActiveFilterThreshold);
-    actFilterBumpConfigured.setCoefficients(bumpActiveFilterPositiveCoef, bumpActiveFilterNegativeCoef);
-
-    ActiveFilter actFilterPotholeConfigured;
-    actFilterPotholeConfigured.setWindowParameters(activeFilterWindowSize, activeFilterOverlapSize);
-    actFilterPotholeConfigured.setThreshold(potholeActiveFilterThreshold);
-    actFilterPotholeConfigured.setCoefficients(potholeActiveFilterPositiveCoef, potholeActiveFilterNegativeCoef);
-
-    ThreeAxisIIR iirFiltAccel;
-    ThreeAxisIIR iirFiltGyro;
-    ThreeAxisIIR_Init(&iirFiltAccel, filterAlpha);
-    ThreeAxisIIR_Init(&iirFiltGyro, filterAlpha);
-
-    std::vector<double> filteredVectorDeque;
-    std::vector<double> unfilteredVectorDeque;
-
-    unsigned int removeBumpSamples = 0;
-    unsigned int removePotholeSamples = 0;
-
-    std::deque<double> outBumpData;
-    std::deque<double> outPotholeData;
-
-    std::deque<double> sequenceBumpDeque;
-    std::deque<double> sequencePotholeDeque;
-
-    std::deque<int> stateBumpDeque;
-    std::deque<int> statePotholeDeque;
-
-    int numberOfCorrectBumpDetections = 0;
-    int numberOfCorrectPotholeDetections = 0;
-    
-    int numberOfIncorrectBumpDetections = 0;
-    int numberOfIncorrectPotholeDetections = 0;
-
-    const unsigned int wholeDequeSize = 150;
-    unsigned int sampleNumber = 0;
-
-    auto processBatch = [&](const std::vector<std::string>& batch) {
-        for (const auto& line : batch) {
-            double ax = 0, ay = 0, az = 0;
-            double gr = 0, gp = 0, gy = 0;
-            double ax_filtered = 0, ay_filtered = 0, az_filtered = 0;
-            double gr_filtered = 0, gp_filtered = 0, gy_filtered = 0;
-            double ax_rotated = 0, ay_rotated = 0, az_rotated = 0;
-            double pitchAngle = 0.0, rollAngle = 0.0;
-            double compoundAccelerationVector = 0.0;
-
-            std::istringstream ss(line);
-            std::string token;
-
-            while (std::getline(ss, token, ',')) {
-                std::istringstream pairStream(token);
-                std::string key, value;
-                if (std::getline(pairStream, key, '=') && std::getline(pairStream, value)) {
-                    double val = std::stod(value);
-                    if (key == "ax") ax = val;
-                    else if (key == "ay") ay = val;
-                    else if (key == "az") az = val;
-                    else if (key == "gr") gr = val;
-                    else if (key == "gp") gp = val;
-                    else if (key == "gy") gy = val;
-                }
-            }
-
-            unfilteredVectorDeque.push_back(compoundVector(ax, ay, az));
-
-            ThreeAxisIIR_Update(&iirFiltAccel, ax, ay, az, &ax_filtered, &ay_filtered, &az_filtered);
-            ThreeAxisIIR_Update(&iirFiltGyro, gr, gp, gy, &gr_filtered, &gp_filtered, &gy_filtered);
-
-            filteredVectorDeque.push_back(compoundVector(ax_filtered, ay_filtered, az_filtered));
-
-            complementaryFilter(ax_filtered, ay_filtered, az_filtered, gr_filtered, gp_filtered, gy_filtered, &rollAngle, &pitchAngle);
-
-            rotateAll(rollAngle * degreesToRadians, pitchAngle * degreesToRadians, ax_filtered, ay_filtered, az_filtered, &ax_rotated, &ay_rotated, &az_rotated);
-
-            compoundAccelerationVector = compoundVector(ax_rotated, ay_rotated, az_rotated);
-
-            actFilterBumpConfigured.feedData(compoundAccelerationVector);
-            actFilterPotholeConfigured.feedData(compoundAccelerationVector);
-
-            if (actFilterBumpConfigured.getCompletedDataSize() > 0) {
-                std::deque<double> completedBumpData = actFilterBumpConfigured.getCompletedData();
-                AppendDeque(outBumpData, completedBumpData);
-            }
-
-            if (actFilterPotholeConfigured.getCompletedDataSize() > 0) {
-                std::deque<double> completedPotholeData = actFilterPotholeConfigured.getCompletedData();
-                AppendDeque(outPotholeData, completedPotholeData);
-            }
-
-            if (outBumpData.size() > wholeDequeSize) {
-                removeBumpSamples = static_cast<unsigned int>(outBumpData.size() - wholeDequeSize);
-                outBumpData.erase(outBumpData.begin(), outBumpData.begin() + removeBumpSamples);
-            }
-
-            if (outPotholeData.size() > wholeDequeSize) {
-                removePotholeSamples = static_cast<unsigned int>(outPotholeData.size() - wholeDequeSize);
-                outPotholeData.erase(outPotholeData.begin(), outPotholeData.begin() + removePotholeSamples);
-            }
-
-            if (outBumpData.size() == wholeDequeSize) {
-                sequenceBumpDeque = z_score_thresholding(outBumpData, lag, z_score_threshold, influence);
-            }
-            if (outPotholeData.size() == wholeDequeSize) {
-                sequencePotholeDeque = z_score_thresholding(outPotholeData, lag, z_score_threshold, influence);
-            }
-
-            auto updateStateDeque = [&](std::deque<int>& stateDeque, const std::deque<double>& sequenceDeque, int risingVal, int fallingVal, int stableVal) {
-                if (getStateChange(sequenceDeque) == SequenceType::Rising) {
-                    stateDeque.push_back(risingVal);
-                } else if (getStateChange(sequenceDeque) == SequenceType::Falling) {
-                    stateDeque.push_back(fallingVal);
-                } else if (getStateChange(sequenceDeque) == SequenceType::Stable) {
-                    stateDeque.push_back(stableVal);
-                }
-            };
-
-            updateStateDeque(stateBumpDeque, sequenceBumpDeque, 1, -1, 0);
-            updateStateDeque(statePotholeDeque, sequencePotholeDeque, 1, -1, 0);
-
-            sampleNumber++;
-        }
-    };
-
-    const size_t batchSize = 100; // Adjust batch size based on performance testing
-    std::vector<std::future<void>> futures;
-    for (size_t i = 0; i < logLines.size(); i += batchSize) {
-        std::vector<std::string> batch(logLines.begin() + i, logLines.begin() + std::min(logLines.size(), i + batchSize));
-        futures.emplace_back(std::async(std::launch::async, processBatch, batch));
-    }
-
-    for (auto& future : futures) {
-        future.get();
-    }
-
-    // Validation
-    unsigned int range = 100;
-
-    auto validateDetections = [&](const std::vector<int>& indices, int detectionValue, int& correctDetections, int& incorrectDetections) {
-        for (const auto& index : indices) {
-            bool validDetection = isValidDetection(stateBumpDeque, index, range, detectionValue);
-            if (validDetection) {
-                ++correctDetections;
-            } else {
-                ++incorrectDetections;
-            }
-        }
-    };
-
-    validateDetections(bumpIndices, 1, numberOfCorrectBumpDetections, numberOfIncorrectBumpDetections);
-    validateDetections(potholeIndices, -1, numberOfCorrectPotholeDetections, numberOfIncorrectPotholeDetections);
-
-    // Save results
-    std::string testResultsFileName = "testResults.csv";
-    std::ofstream testResultsOutputFile(testResultsFileName, std::ios::app);
-
-    if (!testResultsOutputFile.is_open()) {
-        std::cerr << "Error opening file!" << std::endl;
-        return;
-    }
-
-    std::vector<std::string> variableNames = {
-        "lag", "zScoreThreshold", "influence", "numberOfBumps",
-        "numberOfCorrectBumpDetections", "numberOfIncorrectBumpDetections",
-        "numberOfPotholes", "numberOfCorrectPotholeDetections",
-        "numberOfIncorrectPotholeDetections", "bumpDetectionSuccess",
-        "potholeDetectionSuccess", "FIRFilterCutoffFreq"
-    };
-
-    if (isFileEmpty(testResultsFileName)) {
-        writeCSVHeader(testResultsOutputFile, variableNames);
-    }
-
-    testResultsOutputFile << lag << ", " << z_score_threshold << ", " << influence << ", "
-                          << bumpIndices.size() << ", " << numberOfCorrectBumpDetections << ", "
-                          << numberOfIncorrectBumpDetections << ", " << potholeIndices.size() << ", "
-                          << numberOfCorrectPotholeDetections << ", " << numberOfIncorrectPotholeDetections << ", "
-                          << (static_cast<double>(numberOfCorrectBumpDetections) / bumpIndices.size() * 100) << ", "
-                          << (static_cast<double>(numberOfCorrectPotholeDetections) / potholeIndices.size() * 100) << ", "
-                          << cutoffFrequency << std::endl;
-
-    testResultsOutputFile.close();
-
-    // Save the output state changes
-    saveDequeIntoFile(stateBumpDeque, "bump_state_signal");
-    saveDequeIntoFile(statePotholeDeque, "pothole_state_signal");
-
-    std::cout << "Simulation for lag=" << lag << ", threshold=" << z_score_threshold << ", influence=" << influence << " completed." << std::endl;
 }
-*/
 
+void removeExcessSamples(std::deque<double>& outData, int size) {
+    if (outData.size() > size) {
+        unsigned int remove = static_cast<unsigned int>(outData.size() - size);
+        outData.erase(outData.begin(), outData.begin() + remove);
+    }
+}
 
+void applyZScoreThresholding(const std::deque<double>& outData, std::deque<double>& sequenceDeque, int size, unsigned int lag, double z_score_threshold, double influence){
+    if (outData.size() == size) {
+        sequenceDeque = z_score_thresholding(outData, lag, z_score_threshold, influence);
+    }
+}
+
+void determineState(const std::deque<double>& sequenceDeque, std::deque<int>& stateDeque){
+    if (getStateChange(sequenceDeque) == SequenceType::Rising) {
+        stateDeque.push_back(1);
+    }
+    if (getStateChange(sequenceDeque) == SequenceType::Falling) {
+        stateDeque.push_back(-1);
+    }
+    if (getStateChange(sequenceDeque) == SequenceType::Stable) {
+        stateDeque.push_back(0);
+    }
+}
 
 
 // SIMULATION FUNCTION BEGIN
-void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, double z_score_threshold, double influence, const std::vector<int> bumpIndices, const std::vector<int> potholeIndices, double activeFiltThres, double activeFiltPosCoef, double activeFiltNegCoef) {
-
+void runSimulation(const std::vector<SensorData>& sensorData, unsigned int lag, double z_score_threshold, double influence, const std::vector<int> bumpIndices, const std::vector<int> potholeIndices, double actFiltThres, double actFiltPosCoef, double actFiltNegCoef) {
 
     // Initialize Active Filters:
     int activeFilterWindowSize{ 50 };
@@ -662,51 +568,44 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
 
     
     ActiveFilter actFilter;
-    double activeFilterThreshold{ activeFiltThres };
-    double activeFilterPositiveCoef{ activeFiltPosCoef };
-    double activeFilterNegativeCoef{ activeFiltNegCoef };
+    double activeFilterThreshold{ actFiltThres };
+    double activeFilterPositiveCoef{ actFiltPosCoef };
+    double activeFilterNegativeCoef{ actFiltNegCoef };
     actFilter.setWindowParameters(activeFilterWindowSize, activeFilterOverlapSize);
     actFilter.setThreshold(activeFilterThreshold);
     actFilter.setCoefficients(activeFilterPositiveCoef, activeFilterNegativeCoef);
     
     
-    // Initialize Active Filters:
+    
     /*
-    int activeFilterWindowSize{ 50 };
-
-    int activeFilterOverlapSizeBump{ 45 };
-
     ActiveFilter actFilterBumpConfigured;
-    double bumpActiveFilterThreshold{ 0.19 };
-    double bumpActiveFilterPositiveCoef{ 1.7 };
-    double bumpActiveFilterNegativeCoef{ 0.7 }; 
+    double bumpActiveFilterThreshold{ 0.18 };
+    double bumpActiveFilterPositiveCoef{ 1.3 };
+    double bumpActiveFilterNegativeCoef{ 0.9 }; 
     // Parameters for the Bump Active Filter
-    actFilterBumpConfigured.setWindowParameters(activeFilterWindowSize, activeFilterOverlapSizeBump);
+    actFilterBumpConfigured.setWindowParameters(activeFilterWindowSize, activeFilterOverlapSize);
     actFilterBumpConfigured.setThreshold(bumpActiveFilterThreshold);
     actFilterBumpConfigured.setCoefficients(bumpActiveFilterPositiveCoef, bumpActiveFilterNegativeCoef);
 
-
-    int activeFilterOverlapSizePothole{ 45 };
-
     ActiveFilter actFilterPotholeConfigured;
-    double potholeActiveFilterThreshold{ 0.18 };
-    double potholeActiveFilterPositiveCoef{ 1.9 };
+    double potholeActiveFilterThreshold{ 0.13 };
+    double potholeActiveFilterPositiveCoef{ 1.8 };
     double potholeActiveFilterNegativeCoef{ 0.1 }; 
     // Parameters for the Pothole Active Filter
-    actFilterPotholeConfigured.setWindowParameters(activeFilterWindowSize, activeFilterOverlapSizePothole);
+    actFilterPotholeConfigured.setWindowParameters(activeFilterWindowSize, activeFilterOverlapSize);
     actFilterPotholeConfigured.setThreshold(potholeActiveFilterThreshold);
     actFilterPotholeConfigured.setCoefficients(potholeActiveFilterPositiveCoef, potholeActiveFilterNegativeCoef);
     */
     
     
-
+    
+    
     
 
     // ------------------------------------------------------------------------------------------------------------------------
 
     // Initialize IIR Filter
 
-    
     ThreeAxisIIR iirFiltAccel;
     ThreeAxisIIR iirFiltGyro;
     ThreeAxisIIR_Init(&iirFiltAccel, filterAlpha);
@@ -720,11 +619,6 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
     FIRFilter FIRfilterAccel(filterCoefficients);
     FIRFilter FIRfilterGyro(filterCoefficients);
     */
-    
-    
-    // Variables to store the accel, gyro and angle values
-    double ax, ay, az;
-    double gr, gp, gy;
 
     // Variables to store the filtered/rotated acceleration values
     double ax_filtered, ay_filtered, az_filtered;
@@ -743,7 +637,6 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
 
     // Deque to store the filtered/unfiltered acceleration vector:
 
-    
     std::deque<double> filteredVectorDeque;
     filteredVectorDeque.clear();
 
@@ -789,7 +682,7 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
     std::deque<int> statePotholeDeque;
     statePotholeDeque.clear();
     
-    
+
 
     std::string line;
 
@@ -810,51 +703,38 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
     std::deque<double> activeFilterPotholeOutput;
     activeFilterPotholeOutput.clear();
 
-    // Process each line from the vector
-    for (const auto& line : logLines) {
-        std::istringstream ss(line);
-        std::string token;
+    
+    // auto start = std::chrono::high_resolution_clock::now();
 
-        while (std::getline(ss, token, ',')) {
-            std::istringstream pairStream(token);
-            std::string key, value;
-            if (std::getline(pairStream, key, '=') && std::getline(pairStream, value)) {
-                double val = std::stod(value);
-                if (key == "ax") ax = val;
-                else if (key == "ay") ay = val;
-                else if (key == "az") az = val;
-                else if (key == "gr") gr = val;
-                else if (key == "gp") gp = val;
-                else if (key == "gy") gy = val;
-            }
-        }
+    /*
+    int64_t durationIIR{0};
+    int64_t durationCompFilt{0};
+    int64_t durationRotation{0};
+    int64_t durationCAV{0};
+    int64_t durationFeedData{0};
+    int64_t durationAppend{0};
+    int64_t durationRemoveSamples{0};
+    int64_t durationZScore{0};
+    int64_t durationDetermineState{0};
+    */
+    
+    
 
-        unfilteredVectorDeque.push_back(compoundVector(ax, ay, az));
+    for(const auto& data : sensorData){
+
+        //unfilteredVectorDeque.push_back(compoundVector(data.ax, data.ay, data.az));
 
         //ThreeAxisFIR_Update(FIRfilterAccel, ax, ay, az, ax_filtered, ay_filtered, az_filtered);
         //ThreeAxisFIR_Update(FIRfilterGyro, gr, gp, gy, gr_filtered, gp_filtered, gy_filtered);
 
-        /*
-        ax_filtered = ax;
-        ay_filtered = ay;
-        az_filtered = az;
-        gr_filtered = gr;
-        gp_filtered = gp;
-        gy_filtered = gy;
-        */
-        
+        ThreeAxisIIR_Update(&iirFiltAccel, data.ax, data.ay, data.az, &ax_filtered, &ay_filtered, &az_filtered);
+        ThreeAxisIIR_Update(&iirFiltGyro, data.gr, data.gp, data.gy, &gr_filtered, &gp_filtered, &gy_filtered);
 
-        ThreeAxisIIR_Update(&iirFiltAccel, ax, ay, az, &ax_filtered, &ay_filtered, &az_filtered);
-        ThreeAxisIIR_Update(&iirFiltGyro, gr, gp, gy, &gr_filtered, &gp_filtered, &gy_filtered);
-
-        filteredVectorDeque.push_back(compoundVector(ax_filtered, ay_filtered, az_filtered));
-
-       
+        //filteredVectorDeque.push_back(compoundVector(ax_filtered, ay_filtered, az_filtered));
 
         complementaryFilter(ax_filtered, ay_filtered, az_filtered, gr_filtered, gp_filtered, gy_filtered, &rollAngle, &pitchAngle);
 
         rotateAll(rollAngle*degreesToRadians, pitchAngle*degreesToRadians, ax_filtered, ay_filtered, az_filtered, &ax_rotated, &ay_rotated, &az_rotated);
-        // rotateAll(rollAngle*degreesToRadians, pitchAngle*degreesToRadians, gr_filtered, gp_filtered, gy_filtered, &gr_rotated, &gp_rotated, &gy_rotated);
 
         compoundAccelerationVector = compoundVector(ax_rotated, ay_rotated, az_rotated);
 
@@ -862,125 +742,49 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
         //actFilterBumpConfigured.feedData(compoundAccelerationVector);
         //actFilterPotholeConfigured.feedData(compoundAccelerationVector);
 
-        
-        if(actFilter.getCompletedDataSize() > 0){
-            std::deque<double> completedData = actFilter.getCompletedData();
-            AppendDeque(outData, completedData);
-            AppendDeque(activeFilterOutput, completedData);
-        }
-        
-        /*
-        if (actFilterBumpConfigured.getCompletedDataSize() > 0) {
-            std::deque<double> completedBumpData = actFilterBumpConfigured.getCompletedData();
-            AppendDeque(outBumpData, completedBumpData);
-            AppendDeque(activeFilterBumpOutput, completedBumpData);
-        }
 
-        if (actFilterPotholeConfigured.getCompletedDataSize() > 0) {
-            std::deque<double> completedPotholeData = actFilterPotholeConfigured.getCompletedData();
-            AppendDeque(outPotholeData, completedPotholeData);
-            AppendDeque(activeFilterPotholeOutput, completedPotholeData);
-        }
-        */
-        
-        
-        
+        appendIfNotEmpty(actFilter, outData, activeFilterOutput);
+        //appendIfNotEmpty(actFilterBumpConfigured, outBumpData, activeFilterBumpOutput);
+        //appendIfNotEmpty(actFilterPotholeConfigured, outPotholeData, activeFilterPotholeOutput);
 
-        
-        if(outData.size() > wholeDequeSize){
-            removeSamples = static_cast<unsigned int>(outData.size() - wholeDequeSize);
-            outData.erase(outData.begin(), outData.begin() + removeSamples);
-        }
-        
-        
-        /*
-        if (outBumpData.size() > wholeDequeSize) {
-            removeBumpSamples = static_cast<unsigned int>(outBumpData.size() - wholeDequeSize);
-            outBumpData.erase(outBumpData.begin(), outBumpData.begin() + removeBumpSamples);
-        }
-
-        if (outPotholeData.size() > wholeDequeSize) {
-            removePotholeSamples = static_cast<unsigned int>(outPotholeData.size() - wholeDequeSize);
-            outPotholeData.erase(outPotholeData.begin(), outPotholeData.begin() + removePotholeSamples);
-        }
-        */
-        
-        
-        
-        
-        if(outData.size() == wholeDequeSize){
-            sequenceDeque = z_score_thresholding(outData, lag, z_score_threshold, influence);
-        }
-        
+        removeExcessSamples(outData, wholeDequeSize);
+        //removeExcessSamples(outBumpData, wholeDequeSize);
+        //removeExcessSamples(outPotholeData, wholeDequeSize);
 
 
-        /*
-        if (outBumpData.size() == wholeDequeSize) {
-            sequenceBumpDeque = z_score_thresholding(outBumpData, lag, z_score_threshold, influence);
-        }
-        if (outPotholeData.size() == wholeDequeSize) {
-            sequencePotholeDeque = z_score_thresholding(outPotholeData, lag, z_score_threshold, influence);
-        }
-        */
-
-        
-        
-        
-        
-        if (getStateChange(sequenceDeque) == SequenceType::Rising) {
-            stateDeque.push_back(1);
-        }
-        if (getStateChange(sequenceDeque) == SequenceType::Falling) {
-            stateDeque.push_back(-1);
-        }
-        if (getStateChange(sequenceDeque) == SequenceType::Stable) {
-            stateDeque.push_back(0);
-        }
-        
-
-        
-
-        /*
-        if (getStateChange(sequenceBumpDeque) == SequenceType::Rising) {
-            stateBumpDeque.push_back(1);
-        }
-        if (getStateChange(sequenceBumpDeque) == SequenceType::Falling) {
-            stateBumpDeque.push_back(-1);
-        }
-        if (getStateChange(sequenceBumpDeque) == SequenceType::Stable) {
-            stateBumpDeque.push_back(0);
-        }
-
-        // -----------------------------------------------------------------------------
-
-        if (getStateChange(sequencePotholeDeque) == SequenceType::Rising) {
-            statePotholeDeque.push_back(1);
-        }
-        if (getStateChange(sequencePotholeDeque) == SequenceType::Falling) {
-            statePotholeDeque.push_back(-1);
-        }
-        if (getStateChange(sequencePotholeDeque) == SequenceType::Stable) {
-            statePotholeDeque.push_back(0);
-        }
-        
-        */
-        
-        
+        applyZScoreThresholding(outData, sequenceDeque, wholeDequeSize, lag, z_score_threshold, influence);
+        //applyZScoreThresholding(outBumpData, sequenceBumpDeque, wholeDequeSize, lag, 6, influence);
+        //applyZScoreThresholding(outPotholeData, sequencePotholeDeque, wholeDequeSize, lag, 15, influence);
 
 
-        
-
+        determineState(sequenceDeque, stateDeque);
+        //determineState(sequenceBumpDeque, stateBumpDeque);
+        //determineState(sequencePotholeDeque, statePotholeDeque);
 
         sampleNumber++;
 
     }
+
+    /*
+    std::cout << "\ndurationIIR:            " << std::setw(20) << durationIIR
+              << "\ndurationCompFilt:       " << std::setw(20) << durationCompFilt
+              << "\ndurationRotation:       " << std::setw(20) << durationRotation
+              << "\ndurationCAV:            " << std::setw(20) << durationCAV
+              << "\ndurationFeedData:       " << std::setw(20) << durationFeedData
+              << "\ndurationAppend:         " << std::setw(20) << durationAppend
+              << "\ndurationRemoveSamples:  " << std::setw(20) << durationRemoveSamples
+              << "\ndurationZScore:         " << std::setw(20) << durationZScore
+              << "\ndurationDetermineState: " << std::setw(20) << durationDetermineState
+              << std::endl;
+    */
+    
 
     // ---------------- Validation: ----------------------------------------------
 
     unsigned int range{ 100 };
 
     /*
-     //std::cout << "for bumps: " << std::endl;
+    // std::cout << "for bumps: " << std::endl;
     for (const auto& index : bumpIndices) {
         bool validBumpDetection = isValidDetection(stateBumpDeque, index, range, 1);
     
@@ -993,7 +797,7 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
     }
 
 
-    //std::cout << "for potholes: " << std::endl;
+    // std::cout << "for potholes: " << std::endl;
     for (const auto& index : potholeIndices) {
         bool validPotholeDetection = isValidDetection(statePotholeDeque, index, range, -1);
         
@@ -1004,9 +808,13 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
             ++numberOfIncorrectPotholeDetections;
         }
     }
-    */
-   
     
+    */
+    
+    
+    
+    
+   
     
     //std::cout << "for bumps: " << std::endl;
     for (const auto& index : bumpIndices) {
@@ -1034,6 +842,12 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
     }
     
     
+    
+    
+    
+    
+    
+    
 
 
     //std::cout << "false positive state changes from 1 to 0 in state bump deque: " << countStateChangesFrom1to0(stateBumpDeque) - numberOfCorrectBumpDetections << std::endl;
@@ -1042,7 +856,7 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
 
     // ---------------- Save Variables Used in Runtime: --------------------------
 
-    std::string testResultsFileName = "testResults_overlapWindowsAre45.csv";
+    std::string testResultsFileName = "testResults_newZthresholdFixedFakes.csv";
     std::ofstream testResultsOutputFile(testResultsFileName, std::ios::app);
 
     if (!testResultsOutputFile.is_open()) {
@@ -1056,7 +870,9 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
                                              "potholePressCount", "correctPotholeDetections",  "incorrectPotholeDetections", 
                                              "bumpDetectionSuccess", "potholeDetectionSuccess", 
                                              "bumpFalsePositives", "potholeFalsePositives",
-                                             "activeFilterThreshold", "activeFilterPosCoef", "activeFilterNegCoef"}; //  "filterThreshold", "positiveCoef", "negativeCoef"}; //  "changesInRangeBump", "changesOutRangeBump", "changesInRangePot", "changesOutRangePot"};
+                                             "activeFilterThreshold", "activeFilterPosCoef", "activeFilterNegCoef",
+                                             "activeFilterThresholdBump", "activeFilterPosCoefBump", "activeFilterNegCoefBump",
+                                             "activeFilterThresholdPothole", "activeFilterPosCoefPothole", "activeFilterNegCoefPothole"}; //  "filterThreshold", "positiveCoef", "negativeCoef"}; //  "changesInRangeBump", "changesOutRangeBump", "changesInRangePot", "changesOutRangePot"};
 
     if (isFileEmpty(testResultsFileName)) {
         writeCSVHeader(testResultsOutputFile, variableNames);
@@ -1067,23 +883,28 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
                           << ", " << std::to_string(potholeIndices.size()) << ", " << std::to_string(numberOfCorrectPotholeDetections) << ", " << std::to_string(numberOfIncorrectPotholeDetections) 
                           << ", " << std::to_string((static_cast<double>(numberOfCorrectBumpDetections)/bumpIndices.size())*100) 
                           << ", " << std::to_string((static_cast<double>(numberOfCorrectPotholeDetections)/potholeIndices.size())*100)
-                          /*
-                          << ", " << std::to_string(countStateChangesFrom1to0(stateBumpDeque) - numberOfCorrectBumpDetections) 
-                          << ", " << std::to_string(countStateChangesFromMinus1to0(statePotholeDeque) - numberOfCorrectPotholeDetections) << std::endl; 
-                          */
-                          //<< ", " << std::to_string(countStateChangesFrom1to0(stateBumpDeque) - numberOfCorrectBumpDetections) 
-                          //<< ", " << std::to_string(countStateChangesFromMinus1to0(statePotholeDeque) - numberOfCorrectPotholeDetections) 
-                          << ", " << std::to_string(countStateChangesFrom1to0(stateDeque) - numberOfCorrectBumpDetections)
+
+                          << ", " << std::to_string(countStateChangesFrom1to0(stateDeque) - numberOfCorrectBumpDetections) 
                           << ", " << std::to_string(countStateChangesFromMinus1to0(stateDeque) - numberOfCorrectPotholeDetections)
+
+                          //<< ", " << std::to_string(countStateChangesFrom1to0(stateBumpDeque) - numberOfCorrectBumpDetections)
+                          //<< ", " << std::to_string(countStateChangesFromMinus1to0(statePotholeDeque) - numberOfCorrectPotholeDetections)
+
                           << ", " << std::to_string(activeFilterThreshold)
                           << ", " << std::to_string(activeFilterPositiveCoef)
                           << ", " << std::to_string(activeFilterNegativeCoef)
+
                           //<< ", " << std::to_string(overlapSizeBump)
                           //<< ", " << std::to_string(overlapSizePothole)
                           //<< ", " << std::to_string(cutoffFrequency)
-                          //<< ", " << std::to_string(activeFilterThreshold)
-                          //<< ", " << std::to_string(activeFilterPositiveCoef)
-                          //<< ", " << std::to_string(activeFilterNegativeCoef)
+
+                          //<< ", " << std::to_string(bumpActiveFilterThreshold)
+                          //<< ", " << std::to_string(bumpActiveFilterPositiveCoef)
+                          //<< ", " << std::to_string(bumpActiveFilterNegativeCoef)
+
+                          //<< ", " << std::to_string(potholeActiveFilterThreshold)
+                          //<< ", " << std::to_string(potholeActiveFilterPositiveCoef)
+                          //<< ", " << std::to_string(potholeActiveFilterNegativeCoef)
                         
                           << std::endl; 
 
@@ -1093,14 +914,15 @@ void runSimulation(const std::vector<std::string>& logLines, unsigned int lag, d
     // Save the output state changes:
 
     
-    saveDequeIntoFile(stateBumpDeque, "bump_state_signal");
-    saveDequeIntoFile(statePotholeDeque, "pothole_state_signal");
+    //saveDequeIntoFile(stateBumpDeque, "bump_state_signal");
+    //saveDequeIntoFile(statePotholeDeque, "pothole_state_signal");
     
-    saveDequeIntoFile(activeFilterBumpOutput, "active_filter_bump_output");
-    saveDequeIntoFile(activeFilterPotholeOutput, "active_filter_pothole_output");
+    //saveDequeIntoFile(activeFilterBumpOutput, "active_filter_bump_output");
+    //saveDequeIntoFile(activeFilterPotholeOutput, "active_filter_pothole_output");
     
-    /*
+    
     saveDequeIntoFile(stateDeque, "output_state_signals");
+    /*
     saveDequeIntoFile(activeFilterOutput, "active_filter_output");
     */
     
@@ -1136,6 +958,8 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
+
+
     std::vector<std::string> logLines;
     std::string line;
     while (std::getline(logFile, line)) {
@@ -1144,43 +968,68 @@ int main(int argc, char* argv[]){
     logFile.close();
 
 
+    // Parse the log lines into sensor data
+    std::vector<SensorData> sensorData;
+
+    for (const auto& line : logLines) {
+        std::istringstream ss(line);
+        std::string token;
+        SensorData data;
+        while (std::getline(ss, token, ',')) {
+            std::istringstream pairStream(token);
+            std::string key, value;
+            if (std::getline(pairStream, key, '=') && std::getline(pairStream, value)) {
+                double val = std::stod(value);
+                if (key == "ax") data.ax = val;
+                else if (key == "ay") data.ay = val;
+                else if (key == "az") data.az = val;
+                else if (key == "gr") data.gr = val;
+                else if (key == "gp") data.gp = val;
+                else if (key == "gy") data.gy = val;
+            }
+        }
+        sensorData.push_back(data);
+    }
+
+
+
     //---------------------------------------------------------------------------
 
 
     auto bumpIndices{ getStateChangeIndices(readFileIntoDeque("bump_buttons.txt")) };
     auto potholeIndices{ getStateChangeIndices(readFileIntoDeque("pothole_buttons.txt")) };
 
-    //double influence = 0.0; // to be more robust
-    //int lag = 20;
-
-    //for(int lag = 1; lag <= 60; lag += 5){
-    //    runSimulation(logLines, lag, z_score_threshold, influence, bumpIndices, potholeIndices, cutoffFrequency);
-    //}
-
-    //for(double cutoffFreq = 1.0; cutoffFreq <= 10.0; cutoffFreq += 1.0){
-    //    runSimulation(logLines, lag, z_score_threshold, influence, bumpIndices, potholeIndices, cutoffFreq);
-    //}
-
-    //double z_score_threshold = 15.0;
-
-    // no iir and fir filter: active settings
+    
+    // Start timing
+    auto start = std::chrono::high_resolution_clock::now();
 
     /*
-    for(double threshold = 0.5; threshold <= 1.5; threshold += 0.2){
-        for(double posCoef = 1.2; posCoef <= 2.0; posCoef += 0.2){
-            for(double negCoef = 0.2; negCoef <= 0.8; negCoef += 0.2){
-                runSimulation(logLines, lag, z_score_threshold, influence, bumpIndices, potholeIndices, cutoffFrequency, threshold, posCoef, negCoef);
+    
+    */
+    for(double z_score_threshold = 6.0; z_score_threshold <= 15.0; z_score_threshold += 1.0){
+        for(double threshold = 0.0; threshold <= 0.2; threshold += 0.02){
+            for(double posCoef = 1.0; posCoef <= 1.9; posCoef += 0.2){
+                for(double negCoef = 0.0; negCoef <= 0.9; negCoef += 0.2){
+                    runSimulation(sensorData, lag, z_score_threshold, influence, bumpIndices, potholeIndices, threshold, posCoef, negCoef);
+                }
             }
         }
     }
-    */
+    
+    
+        
 
-    //for(int overlapSizeBump = 5; overlapSizeBump < 50; overlapSizeBump += 5){
-        //for(int overlapSizePothole = 5; overlapSizePothole < 50; overlapSizePothole += 5){
-            //runSimulation(logLines, lag, z_score_threshold, influence, bumpIndices, potholeIndices, activeFiltThres, activeFiltPosCoef, activeFiltNegCoef);
-        //}
-    //}
+    // End timing
+    auto end = std::chrono::high_resolution_clock::now();
 
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    std::cout << "Execution time: " << duration << " milliseconds" << std::endl;
+
+
+    
+
+    /*
     for(double z_score_threshold = 5.0; z_score_threshold <= 15.0; z_score_threshold += 5.0){
         for(double activeFiltThres = 0.01; activeFiltThres <= 0.2; activeFiltThres += 0.02){
             for(double activeFiltPosCoef = 1.1; activeFiltPosCoef <= 2.0; activeFiltPosCoef += 0.1){
@@ -1190,28 +1039,12 @@ int main(int argc, char* argv[]){
             }
         }    
     }
+    */
+    
     
 
 
     //runSimulation(logLines, lag, z_score_threshold, influence, bumpIndices, potholeIndices, cutoffFrequency, 0.8, 1.2, 0.4);
-
-
-    //for(double actFiltThres = 0.6; actFiltThres <= 0.8; actFiltThres += 0.1){
-        //for(double actFiltPosCoef = 1.4; actFiltPosCoef <= 1.8; actFiltPosCoef += 0.2){
-            //for(double actFiltNegCoef = 0.1; actFiltNegCoef <= 0.9; actFiltNegCoef += 0.1){
-                //for(double z_score_threshold = 11.0; z_score_threshold <= 21.0; z_score_threshold += 2.0){
-                    //for(double actFiltThres = 0.3; actFiltThres <= 0.5; actFiltThres += 0.1){
-    
-                    //}
-                //}
-            //}
-            // Create a new thread for each combination of lag and z_score_threshold
-            //threads.emplace_back(runSimulation, logLines, lag, z_score_threshold, influence, bumpIndices, potholeIndices, cutoffFrequency);
-        //}
-    //}
-
-    
-
 
 
 

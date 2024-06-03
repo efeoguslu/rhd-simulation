@@ -16,7 +16,6 @@ void FirstOrderIIR_Init(FirstOrderIIR *filt, double alpha){
 }
 
 double FirstOrderIIR_Update(FirstOrderIIR *filt, double in){
-
     filt->out = (1.0f - filt->alpha) * in + filt->alpha * filt->out;
     return filt->out;
 }
@@ -307,12 +306,12 @@ void ActiveFilter::feedData(double data)
     }
 }
 
-long unsigned int ActiveFilter::getCompletedDataSize()
+long unsigned int ActiveFilter::getCompletedDataSize() const
 {
     return this->m_completedData.size();
 }
 
-std::deque<double> ActiveFilter::getCompletedData()
+std::deque<double> ActiveFilter::getCompletedData() const
 {    
     // temporary copy for return
     std::deque<double> retData(this->m_completedData);

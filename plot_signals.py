@@ -119,8 +119,8 @@ def main():
 
     plot_data(x2, y2, "peak detection", ax=ax)
     plot_buttons_lines(ax, time_vector, buttons, button_sets, button_colors)
-    plot_data(active_filter_output_timevector, active_filter_output, "active filter output", ax=ax)
-    plot_data(unfiltered_signal_timevector, unfiltered_signal, "unfiltered signal", ax=ax)
+    #plot_data(active_filter_output_timevector, active_filter_output, "active filter output", ax=ax)
+    #plot_data(unfiltered_signal_timevector, unfiltered_signal, "unfiltered signal", ax=ax)
 
     plt.legend()
 

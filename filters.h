@@ -108,7 +108,7 @@ private:
     bool  m_dataInit    = false;
     std::deque<double> m_data;  //size: windowSize
     std::deque<double> m_newData; // size: windowSize-overlapSize
-    std::deque<double> m_completedData; // completed data , no more operations will be done on there
+    mutable std::deque<double> m_completedData; // completed data , no more operations will be done on there
 
     // |_______||__overlap___||__newdata__|
     // |---------window-------|
@@ -122,8 +122,8 @@ public:
     void                setOffset(double offset);
     void                setCoefficients(double posCoef, double negCoef);
     void                feedData(double data);
-    long unsigned int   getCompletedDataSize();
-    std::deque<double>  getCompletedData();     // maybe return can be changed as vector / queue 
+    long unsigned int   getCompletedDataSize()const;
+    std::deque<double>  getCompletedData()const;     // maybe return can be changed as vector / queue 
 
 private:
     void                initMembers();
