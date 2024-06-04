@@ -338,16 +338,6 @@ void ActiveFilter::doCalculation()
     double maxVal = this->getMaxValue();
     double operationCoef = 1.0;
 
-    /*
-    if((maxVal - 0.0) > this->m_threshold){
-        operationCoef = this->m_posCoef;
-    }
-    else if((minVal - 0.0) > this->m_threshold){
-        operationCoef = this->m_negCoef;
-    }
-    */
-    
-
     // original method
     if( (maxVal-minVal) > this->m_threshold)
     {
