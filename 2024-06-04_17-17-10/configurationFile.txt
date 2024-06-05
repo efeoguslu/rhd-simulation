@@ -1,0 +1,1 @@
+[2024-06-04 17:17:10.917363][INFO],lag=50,z_score_threshold=10.000000,influence=0.250000,activeFilterWindowSize=50,activeFilterOverlapSize=35,activeFilterThreshold=0.200000,activeFilterPositiveCoef=1.600000,activeFilterNegativeCoef=0.100000

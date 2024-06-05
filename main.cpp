@@ -94,16 +94,17 @@ int main(int argc, char* argv[]){
     lags = {50};
     
     //populateVector(lags, 0u, 70u, 5u);
-    populateVector(z_score_thresholds, 7.0, 20.0, 1.0);
-    populateVector(influences, 0.0, 0.3, 0.1);
-
-    //z_score_thresholds = {8.0, 9.0, 10.0};
-    //influences = {0.25};
+    //populateVector(z_score_thresholds, 7.0, 20.0, 1.0);
+    //populateVector(influences, 0.0, 0.3, 0.1);
 
 
-    activeFilterThresholds = {10.0};
-    activeFilterPositiveCoefficients = {1.0};
-    activeFilterNegativeCoefficients = {1.0};
+    influences = { 0.25 }; 
+    z_score_thresholds = {10.0};
+
+
+    activeFilterThresholds = {0.2};
+    activeFilterPositiveCoefficients = {1.6};
+    activeFilterNegativeCoefficients = {0.1};
 
     /*
     populateVector(activeFilterThresholds, 0.05, 0.5, 0.05);
@@ -115,8 +116,9 @@ int main(int argc, char* argv[]){
 
 
 
+    iirFilterAlphas = { 0.9 };
 
-    populateVector(iirFilterAlphas, 0.0, 1.0, 0.1);
+    //populateVector(iirFilterAlphas, 0.0, 1.0, 0.1);
 
 
     // ---------------------------------------------------------------------------

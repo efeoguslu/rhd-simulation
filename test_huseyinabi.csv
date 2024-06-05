@@ -1,0 +1,4 @@
+lag,zScoreThreshold,influence,bumpPressCount,correctBumpDetections,incorrectBumpDetections,potholePressCount,correctPotholeDetections,incorrectPotholeDetections,bumpDetectionSuccess,potholeDetectionSuccess,bumpFalsePositives,potholeFalsePositives,activeFilterThreshold,activeFilterPosCoef,activeFilterNegCoef,activeFilterThresholdBump,activeFilterPosCoefBump,activeFilterNegCoefBump,activeFilterThresholdPothole,activeFilterPosCoefPothole,activeFilterNegCoefPothole
+50, 10.000000, 0.250000, 21, 0, 21, 11, 0, 11, 0.000000, 0.000000, 0, 0, 10.000000, 1.600000, 0.100000
+50, 10.000000, 0.250000, 21, 0, 21, 11, 0, 11, 0.000000, 0.000000, 0, 0, 10.000000, 1.600000, 0.100000
+50, 10.000000, 0.250000, 21, 0, 21, 11, 0, 11, 0.000000, 0.000000, 1, 4, 0.200000, 1.600000, 0.100000

@@ -746,6 +746,8 @@ void simulation(const std::vector<SensorData>& sensorData,
 
         compoundAccelerationVector = compoundVector(ax_rotated, ay_rotated, az_rotated);
 
+        filteredVectorDeque.push_back(compoundAccelerationVector);
+
         actFilter.feedData(compoundAccelerationVector);
         //actFilterBumpConfigured.feedData(compoundAccelerationVector);
         //actFilterPotholeConfigured.feedData(compoundAccelerationVector);
@@ -770,7 +772,9 @@ void simulation(const std::vector<SensorData>& sensorData,
         sampleNumber++;
     }
 
-
+    saveDequeIntoFile(filteredVectorDeque, "compound_acceleration_vector");
+    saveDequeIntoFile(stateDeque, "runtime_state_deque");
+    saveDequeIntoFile(activeFilterOutput, "active_filter_output");
 
 
     auto endSim = std::chrono::high_resolution_clock::now();
@@ -942,7 +946,7 @@ void runSimulations(const std::vector<SensorData>& sensorData,
     }
 
     // Write results to the CSV file once
-    std::string testResultsFileName = "test.csv";
+    std::string testResultsFileName = "test_huseyinabi.csv";
     std::ofstream testResultsOutputFile(testResultsFileName, std::ios::app);
 
     if (!testResultsOutputFile.is_open()) {

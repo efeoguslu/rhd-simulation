@@ -84,15 +84,41 @@ def detect_state_changes_and_write_to_file(name, lst):
             # Update the previous value for the next iteration
             prev_value = value
 
+def modify_bumps(input_list):
+    # Iterate over the list using enumerate to get both index and value
+    for i, val in enumerate(input_list):
+        if val == 2:
+            input_list[i] = 0  # Set it to 0 if the current value is 2
+        elif val == 0:
+            input_list[i] = 1  # Set it to 1 if the current value is 0
+    return input_list
+
+def modify_potholes(input_list):
+    # Iterate over the list using enumerate to get both index and value
+    for i, val in enumerate(input_list):
+        if val == 2:
+            input_list[i] = 0  # Set it to 0 if the current value is 2
+        elif val == 1:
+            input_list[i] = -1  # Set it to 1 if the current value is 0
+    return input_list
+
 def main():
     target_folder_path = update_target_folder_path()
     dataList = prepare_data_from_logs(target_folder_path)
 
     button_keys = ['pothole_button_state', 'bump_button_state']
+
+    #for newer datasets:
+    state_change_keys = ['state_bump', 'state_pothole']
+
     buttons = extract_data_by_keys(dataList, button_keys)  # list of lists
+    state_changes = extract_data_by_keys(dataList, state_change_keys)
 
     pothole_button_presses = buttons[0]
     bump_button_presses = buttons[1]
+
+    bump_states = state_changes[0]
+    pothole_states = state_changes[1]
 
     #detect_state_changes_and_write_to_file("pothole_buttons.txt", pothole_button_presses)
     #detect_state_changes_and_write_to_file("bump_buttons.txt", bump_button_presses)
@@ -105,20 +131,32 @@ def main():
     button_sets = [bump_button_set, pothole_button_set]
     button_colors = ['red', 'gold']
 
-    y2 = load_data('output_state_signals.txt')
+    #y2 = load_data('output_state_signals.txt')
+    #active_filter_output = load_data('active_filter_output.txt')
+    #active_filter_output_timevector = np.arange(len(active_filter_output)) / sampling_rate
+
+    #filtered_signal = load_data('filtered_signal.txt')
+    #unfiltered_signal = load_data('unfiltered_signal.txt')
+    #unfiltered_signal_timevector = np.arange(len(unfiltered_signal)) / sampling_rate
+
+    #x2 = np.arange(len(y2)) / sampling_rate  # Convert to time scale
+
+    compound_acceleration_vector = load_data('compound_acceleration_vector.txt')
     active_filter_output = load_data('active_filter_output.txt')
-    active_filter_output_timevector = np.arange(len(active_filter_output)) / sampling_rate
-
-    filtered_signal = load_data('filtered_signal.txt')
-    unfiltered_signal = load_data('unfiltered_signal.txt')
-    unfiltered_signal_timevector = np.arange(len(unfiltered_signal)) / sampling_rate
-
-    x2 = np.arange(len(y2)) / sampling_rate  # Convert to time scale
+    runtime_state_change = load_data('runtime_state_deque.txt')
 
     fig, ax = plt.subplots()  # Create a new figure and axis
 
-    plot_data(x2, y2, "peak detection", ax=ax)
-    plot_buttons_lines(ax, time_vector, buttons, button_sets, button_colors)
+    # print(pothole_states)
+
+    plot_data(time_vector, modify_potholes(pothole_states), "pothole", ax=ax)
+    plot_data(time_vector, modify_bumps(bump_states), "bump", ax=ax)
+    plot_data(time_vector, compound_acceleration_vector, "CAV", ax=ax)
+    plot_data(time_vector, active_filter_output, "active filter output", ax=ax)
+    plot_data(time_vector, runtime_state_change, "runtime_state_change", ax=ax)
+
+    #plot_data(x2, y2, "peak detection", ax=ax)
+    #plot_buttons_lines(ax, time_vector, buttons, button_sets, button_colors)
     #plot_data(active_filter_output_timevector, active_filter_output, "active filter output", ax=ax)
     #plot_data(unfiltered_signal_timevector, unfiltered_signal, "unfiltered signal", ax=ax)
 
