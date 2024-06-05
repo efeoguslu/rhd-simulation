@@ -86,17 +86,24 @@ int main(int argc, char* argv[]){
     std::vector<double> activeFilterNegativeCoefficients;
     activeFilterNegativeCoefficients.clear();
 
+    std::vector<double> iirFilterAlphas;
+    iirFilterAlphas.clear();
+
     // ---------------------------------------------------------------------------
 
     lags = {50};
-    z_score_thresholds = {8.0, 9.0, 10.0};
-    influences = {0.25};
+    
+    //populateVector(lags, 0u, 70u, 5u);
+    populateVector(z_score_thresholds, 7.0, 20.0, 1.0);
+    populateVector(influences, 0.0, 0.3, 0.1);
 
-    populateVector(activeFilterThresholds, 0.19, 0.2, 0.001);
+    //z_score_thresholds = {8.0, 9.0, 10.0};
+    //influences = {0.25};
 
-    //activeFilterThresholds = {0.19, 0.2, 0.21, 0.22, 0.23};
-    activeFilterPositiveCoefficients = {1.6};
-    activeFilterNegativeCoefficients = {0.1};
+
+    activeFilterThresholds = {10.0};
+    activeFilterPositiveCoefficients = {1.0};
+    activeFilterNegativeCoefficients = {1.0};
 
     /*
     populateVector(activeFilterThresholds, 0.05, 0.5, 0.05);
@@ -104,7 +111,12 @@ int main(int argc, char* argv[]){
     populateVector(activeFilterNegativeCoefficients, 0.1, 0.9, 0.1);
     */
 
-    
+
+
+
+
+
+    populateVector(iirFilterAlphas, 0.0, 1.0, 0.1);
 
 
     // ---------------------------------------------------------------------------
@@ -117,6 +129,7 @@ int main(int argc, char* argv[]){
     runSimulations(sensorData, 
                   lags, z_score_thresholds, influences, 
                   bumpIndices, potholeIndices, 
+                  iirFilterAlphas,
                   activeFilterThresholds, activeFilterPositiveCoefficients, activeFilterNegativeCoefficients);
     
     

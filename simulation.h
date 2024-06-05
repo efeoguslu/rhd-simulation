@@ -142,11 +142,17 @@ void populateVector(std::vector<T>& vec, T start, T end, T step);
 */
 
 
-void simulation(const std::vector<SensorData>& sensorData, 
-                   unsigned int lag, double z_score_threshold, double influence, 
-                   const std::vector<int> bumpIndices, const std::vector<int> potholeIndices, 
+void simulation(const std::vector<SensorData>& sensorData,
+
+                   unsigned int lag, double z_score_threshold, double influence,
+
+                   const std::vector<int> bumpIndices, const std::vector<int> potholeIndices,
+
                    double actFiltThres, double actFiltPosCoef, double actFiltNegCoef,
-                   std::vector<std::string>& results);
+
+                   std::vector<std::string>& results,
+                   
+                   double iirAlpha);
 
 
 
@@ -157,28 +163,9 @@ void simulation(const std::vector<SensorData>& sensorData,
 
 void runSimulations(const std::vector<SensorData>& sensorData, 
                     const std::vector<unsigned int>& lags, const std::vector<double>& z_score_thresholds, const std::vector<double>& influences, 
-                    const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices,
+                    const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices, const std::vector<double>& iirFilterAlpha,
                     const std::vector<double>& actFiltThres, const std::vector<double>& activeFiltPosCoefs, const std::vector<double>& activeFiltNegCoefs);
 
 
-
-
-void runSimulations(const std::vector<SensorData>& sensorData, 
-                    const std::vector<unsigned int>& lags, const std::vector<double>& z_score_thresholds, const std::vector<double>& influences, 
-                    const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices,
-                    double actFiltThres, double activeFiltPosCoefs, double activeFiltNegCoefs);
-
-
-
-void runSimulations(const std::vector<SensorData>& sensorData, 
-                    unsigned int lags, double z_score_thresholds, double influences, 
-                    const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices,
-                    const std::vector<double>& actFiltThres, const std::vector<double>& activeFiltPosCoefs, const std::vector<double>& activeFiltNegCoefs);
-
-
-void runSimulations(const std::vector<SensorData>& sensorData, 
-                    unsigned int lags, double z_score_thresholds, double influences, 
-                    const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices,
-                    double actFiltThres, double activeFiltPosCoefs, double activeFiltNegCoefs);
 
 
