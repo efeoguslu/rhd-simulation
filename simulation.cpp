@@ -223,6 +223,8 @@ EventType getStateChange(const std::deque<double>& states) {
     }
 
     for (size_t i = 1; i < states.size(); ++i) {
+
+        /*
         if (states[i] == 0) {
             if (states[i-1] == 1) {
                 return EventType::Bump;
@@ -230,6 +232,21 @@ EventType getStateChange(const std::deque<double>& states) {
                 return EventType::Pothole;
             }
         }
+        */
+        
+        if(states[i] == 1){
+            if((states[i - 1] == 0) || (states[i - 1] == -1)){
+                return EventType::Bump;
+            }
+        }
+
+        if(states[i] == -1){
+            if((states[i - 1] == 0) || (states[i - 1] == 1)){
+                return EventType::Pothole;
+            }
+        }
+
+
     }
 
     return EventType::Stable;

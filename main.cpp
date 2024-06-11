@@ -108,13 +108,13 @@ int main(int argc, char* argv[]){
     //populateVector(influences, 0.0, 0.3, 0.1);
 
 
-    influences = { 0.25 }; 
-    z_score_thresholds = { 10.0 };
+    influences = { 0.0 }; 
+    z_score_thresholds = { 8.0, 10.0, 12.0 };
 
 
     activeFilterThresholds = { 0.2 };
-    activeFilterPositiveCoefficients = { 1.6 };
-    activeFilterNegativeCoefficients = { 0.1 };
+    activeFilterPositiveCoefficients = { 1.4, 1.6, 1.8};
+    activeFilterNegativeCoefficients = { 0.0 };
 
     /*
     populateVector(activeFilterThresholds, 0.05, 0.5, 0.05);
@@ -126,7 +126,7 @@ int main(int argc, char* argv[]){
 
 
 
-    iirFilterAlphas = { 0.9 };
+    iirFilterAlphas = {0.7, 0.8, 0.9 };
 
     //populateVector(iirFilterAlphas, 0.0, 1.0, 0.1);
 

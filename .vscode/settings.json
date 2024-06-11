@@ -59,6 +59,7 @@
         "filesystem": "cpp",
         "map": "cpp",
         "future": "cpp",
-        "optional": "cpp"
+        "optional": "cpp",
+        "cstring": "cpp"
     }
 }

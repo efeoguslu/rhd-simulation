@@ -227,7 +227,7 @@ def main():
     #plot_data(time_vector, simulation_runtime_state_change, "simulation_runtime_state_change", ax=ax)
     #plot_data(time_vector, simulation_runtime_sequence_deque, "simulation_runtime_sequence_deque", ax=ax)
 
-    plot_buttons_lines(ax, time_vector, buttons, button_sets, button_colors)
+    #plot_buttons_lines(ax, time_vector, buttons, button_sets, button_colors)
 
     plt.legend()
 
