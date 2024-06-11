@@ -405,9 +405,9 @@ std::deque<int> readFileIntoDeque(std::string filename) {
 }
 
 template<typename T>
-void saveDequeIntoFile(const std::deque<T>& deque, std::string name){
+void saveDequeIntoFile(const std::deque<T>& deque, std::string name, const std::string directoryPath){
     
-    std::string outputFileName = name + ".txt";
+    std::string outputFileName = directoryPath + "/" + name + ".txt";
     std::ofstream outputFile(outputFileName);
 
     if (!outputFile.is_open()) {
@@ -563,7 +563,9 @@ void simulation(const std::vector<SensorData>& sensorData,
 
                    std::vector<std::string>& results,
                    
-                   double iirAlpha) {
+                   double iirAlpha,
+                   
+                   std::string directoryPath) {
     
 
     auto startInits = std::chrono::high_resolution_clock::now();
@@ -577,6 +579,7 @@ void simulation(const std::vector<SensorData>& sensorData,
     double activeFilterThreshold{ actFiltThres };
     double activeFilterPositiveCoef{ actFiltPosCoef };
     double activeFilterNegativeCoef{ actFiltNegCoef };
+
     actFilter.setWindowParameters(activeFilterWindowSize, activeFilterOverlapSize);
     actFilter.setThreshold(activeFilterThreshold);
     actFilter.setCoefficients(activeFilterPositiveCoef, activeFilterNegativeCoef);
@@ -761,6 +764,7 @@ void simulation(const std::vector<SensorData>& sensorData,
         //removeExcessSamples(outPotholeData, wholeDequeSize);
 
         applyZScoreThresholding(outData, sequenceDeque, wholeDequeSize, lag, z_score_threshold, influence);
+        
         //applyZScoreThresholding(outBumpData, sequenceBumpDeque, wholeDequeSize, lag, 6, influence);
         //applyZScoreThresholding(outPotholeData, sequencePotholeDeque, wholeDequeSize, lag, 15, influence);
 
@@ -772,9 +776,10 @@ void simulation(const std::vector<SensorData>& sensorData,
         sampleNumber++;
     }
 
-    saveDequeIntoFile(filteredVectorDeque, "compound_acceleration_vector");
-    saveDequeIntoFile(stateDeque, "runtime_state_deque");
-    saveDequeIntoFile(activeFilterOutput, "active_filter_output");
+    saveDequeIntoFile(filteredVectorDeque, "compound_acceleration_vector", directoryPath);
+    saveDequeIntoFile(stateDeque, "simulation_runtime_state_deque", directoryPath);
+    saveDequeIntoFile(sequenceDeque, "simulation_runtime_sequence_deque", directoryPath);
+    saveDequeIntoFile(activeFilterOutput, "active_filter_output", directoryPath);
 
 
     auto endSim = std::chrono::high_resolution_clock::now();
@@ -919,7 +924,8 @@ void simulation(const std::vector<SensorData>& sensorData,
 void runSimulations(const std::vector<SensorData>& sensorData, 
                     const std::vector<unsigned int>& lags, const std::vector<double>& z_score_thresholds, const std::vector<double>& influences, 
                     const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices, const std::vector<double>& iirFilterAlpha,
-                    const std::vector<double>& actFiltThres, const std::vector<double>& activeFiltPosCoefs, const std::vector<double>& activeFiltNegCoefs){
+                    const std::vector<double>& actFiltThres, const std::vector<double>& activeFiltPosCoefs, const std::vector<double>& activeFiltNegCoefs,
+                    const std::string directoryPath){
 
 
     // Prepare to collect results
@@ -932,11 +938,13 @@ void runSimulations(const std::vector<SensorData>& sensorData,
     for (unsigned int lag : lags) {
         for (double z_score_threshold : z_score_thresholds) {
             for (double influence : influences) {
+
                 for(double threshold : actFiltThres){
                     for(double posCoef : activeFiltPosCoefs){
                         for(double negCoef : activeFiltNegCoefs){
+
                             for(double alpha : iirFilterAlpha)
-                                simulation(sensorData, lag, z_score_threshold, influence, bumpIndices, potholeIndices, threshold, posCoef, negCoef, results, alpha);
+                                simulation(sensorData, lag, z_score_threshold, influence, bumpIndices, potholeIndices, threshold, posCoef, negCoef, results, alpha, directoryPath);
 
                         }
                     }

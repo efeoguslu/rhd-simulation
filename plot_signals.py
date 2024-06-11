@@ -10,8 +10,30 @@ import accelLogParser
 default_target_folder_path = "C:\\Users\\efeog\\OneDrive\\Masaüstü\\road-hazard-detection-simulation"
 sampling_rate = 75.0
 
-def load_data(filename):
-    return np.loadtxt(filename)
+def get_nmea_file(target):
+    # list files
+    file_names = os.listdir(target)
+
+    # iterate over the file names
+    for file_name in file_names:
+        # check if the file name ends with ".nmea"
+        if file_name.endswith(".nmea"):
+            return file_name
+        
+
+def equalize_list_sizes(list1, list2):
+    size1 = len(list1)
+    size2 = len(list2)
+    if size1 != size2:
+        if size2 < size1:
+            list2 = np.append(list2, [0.0] * (size1 - size2))
+        else:
+            list2 = list2[:size1]
+    return list2
+
+
+def load_data(file_path):
+    return np.loadtxt(file_path)
 
 def plot_data(x, y, label, ax=None):
     if ax is None:
@@ -68,9 +90,9 @@ def plot_buttons_lines(ax, time, button, button_sets, colors):
             if (button[i][j] == 0) and button_sets[i]:
                 button_sets[i] = False
 
-def detect_state_changes_and_write_to_file(name, lst):
+def detect_state_changes_and_write_to_file(file_path, lst):
     # Open a new text file in write mode
-    with open(name, 'w') as f:
+    with open(file_path, 'w') as f:
         # Initialize variables to track the previous value and the current index
         prev_value = lst[0]
         for i, value in enumerate(lst):
@@ -102,9 +124,34 @@ def modify_potholes(input_list):
             input_list[i] = -1  # Set it to 1 if the current value is 0
     return input_list
 
+def plot_speed(dataList, gpsList, time, ax):
+
+    speed_data = []
+
+    for i in dataList:
+        gpsEnt = accelLogParser.getGpsEntryAtTime(gpsList, i["time"])
+        speed_value = 0
+        
+        if (gpsEnt != None):
+           speed_value = gpsEnt["speed"]
+        
+        speed_data.append(float(speed_value))
+
+    speed_color = 'tab:red' 
+    ax2 = ax.twinx()
+    ax2.set_ylabel('Speed (km/h)', color=speed_color)
+    ax2.tick_params(axis='y', labelcolor=speed_color)
+    ax2.plot(time, speed_data, color=speed_color, label = "Speed")
+    ax2.legend(loc = 'upper left')
+
+
 def main():
     target_folder_path = update_target_folder_path()
     dataList = prepare_data_from_logs(target_folder_path)
+    gpsList = accelLogParser.parseGpsLinesFromLog(os.path.join(target_folder_path, get_nmea_file(target_folder_path)))
+
+
+    acceleration_keys = ['ax_rotated', 'ay_rotated', 'az_rotated']
 
     button_keys = ['pothole_button_state', 'bump_button_state']
 
@@ -114,14 +161,21 @@ def main():
     buttons = extract_data_by_keys(dataList, button_keys)  # list of lists
     state_changes = extract_data_by_keys(dataList, state_change_keys)
 
+    accelerations = extract_data_by_keys(dataList, acceleration_keys)
+    accel_x = accelerations[0]
+    accel_y = accelerations[1]
+    accel_z = accelerations[2]
+
+
     pothole_button_presses = buttons[0]
     bump_button_presses = buttons[1]
 
     bump_states = state_changes[0]
     pothole_states = state_changes[1]
 
-    #detect_state_changes_and_write_to_file("pothole_buttons.txt", pothole_button_presses)
-    #detect_state_changes_and_write_to_file("bump_buttons.txt", bump_button_presses)
+
+    detect_state_changes_and_write_to_file(os.path.join(target_folder_path, "pothole_buttons.txt"), pothole_button_presses)
+    detect_state_changes_and_write_to_file(os.path.join(target_folder_path, "bump_buttons.txt"), bump_button_presses)
     
     time_vector = get_time(buttons[0])
 
@@ -141,24 +195,39 @@ def main():
 
     #x2 = np.arange(len(y2)) / sampling_rate  # Convert to time scale
 
-    compound_acceleration_vector = load_data('compound_acceleration_vector.txt')
-    active_filter_output = load_data('active_filter_output.txt')
-    runtime_state_change = load_data('runtime_state_deque.txt')
+    compound_acceleration_vector = load_data(os.path.join(target_folder_path, 'compound_acceleration_vector.txt'))
+    active_filter_output = load_data(os.path.join(target_folder_path, 'active_filter_output.txt'))
+    simulation_runtime_state_change = load_data(os.path.join(target_folder_path, 'simulation_runtime_state_deque.txt'))
+    simulation_runtime_sequence_deque = load_data(os.path.join(target_folder_path, 'simulation_runtime_sequence_deque.txt'))
+
+
+
+    active_filter_output = equalize_list_sizes(compound_acceleration_vector, active_filter_output)
+
+
 
     fig, ax = plt.subplots()  # Create a new figure and axis
 
     # print(pothole_states)
 
-    plot_data(time_vector, modify_potholes(pothole_states), "pothole", ax=ax)
-    plot_data(time_vector, modify_bumps(bump_states), "bump", ax=ax)
+    # plot_data(time_vector, modify_potholes(pothole_states), "pothole", ax=ax)
+
+
+    # plot_data(time_vector, modify_bumps(bump_states), "bump", ax=ax)
+
+
+    #plot_data(time_vector, accel_x, "accelX", ax=ax)
+    #plot_data(time_vector, accel_y, "accelY", ax=ax)
+    #plot_data(time_vector, accel_z, "accelZ", ax=ax)
+
     plot_data(time_vector, compound_acceleration_vector, "CAV", ax=ax)
     plot_data(time_vector, active_filter_output, "active filter output", ax=ax)
-    plot_data(time_vector, runtime_state_change, "runtime_state_change", ax=ax)
 
-    #plot_data(x2, y2, "peak detection", ax=ax)
-    #plot_buttons_lines(ax, time_vector, buttons, button_sets, button_colors)
-    #plot_data(active_filter_output_timevector, active_filter_output, "active filter output", ax=ax)
-    #plot_data(unfiltered_signal_timevector, unfiltered_signal, "unfiltered signal", ax=ax)
+    #plot_speed(dataList, gpsList, time_vector, ax=ax)
+    #plot_data(time_vector, simulation_runtime_state_change, "simulation_runtime_state_change", ax=ax)
+    #plot_data(time_vector, simulation_runtime_sequence_deque, "simulation_runtime_sequence_deque", ax=ax)
+
+    plot_buttons_lines(ax, time_vector, buttons, button_sets, button_colors)
 
     plt.legend()
 

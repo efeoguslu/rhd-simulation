@@ -62,18 +62,24 @@ int main(int argc, char* argv[]){
         sensorData.push_back(data);
     }
 
+
+
     // ---------------------------------------------------------------------------
+
 
     auto bumpIndices{ getStateChangeIndices(readFileIntoDeque("bump_buttons.txt")) };
     auto potholeIndices{ getStateChangeIndices(readFileIntoDeque("pothole_buttons.txt")) };
+
 
     // ---------------------------------------------------------------------------
 
     
     std::vector<unsigned int> lags;
     lags.clear();  
+
     std::vector<double> z_score_thresholds;
     z_score_thresholds.clear();
+
     std::vector<double> influences;
     influences.clear();
 
@@ -81,17 +87,21 @@ int main(int argc, char* argv[]){
 
     std::vector<double> activeFilterThresholds;
     activeFilterThresholds.clear();
+
     std::vector<double> activeFilterPositiveCoefficients;
     activeFilterPositiveCoefficients.clear();
+
     std::vector<double> activeFilterNegativeCoefficients;
     activeFilterNegativeCoefficients.clear();
+
+    // ---------------------------------------------------------------------------
 
     std::vector<double> iirFilterAlphas;
     iirFilterAlphas.clear();
 
     // ---------------------------------------------------------------------------
 
-    lags = {50};
+    lags = { 50 };
     
     //populateVector(lags, 0u, 70u, 5u);
     //populateVector(z_score_thresholds, 7.0, 20.0, 1.0);
@@ -99,12 +109,12 @@ int main(int argc, char* argv[]){
 
 
     influences = { 0.25 }; 
-    z_score_thresholds = {10.0};
+    z_score_thresholds = { 10.0 };
 
 
-    activeFilterThresholds = {0.2};
-    activeFilterPositiveCoefficients = {1.6};
-    activeFilterNegativeCoefficients = {0.1};
+    activeFilterThresholds = { 0.2 };
+    activeFilterPositiveCoefficients = { 1.6 };
+    activeFilterNegativeCoefficients = { 0.1 };
 
     /*
     populateVector(activeFilterThresholds, 0.05, 0.5, 0.05);
@@ -123,7 +133,6 @@ int main(int argc, char* argv[]){
 
     // ---------------------------------------------------------------------------
 
-    // Overloads for runSimulations are written. You can pass in either vectors of parameters, or variables.
 
     auto start = std::chrono::high_resolution_clock::now();
     
@@ -132,7 +141,9 @@ int main(int argc, char* argv[]){
                   lags, z_score_thresholds, influences, 
                   bumpIndices, potholeIndices, 
                   iirFilterAlphas,
-                  activeFilterThresholds, activeFilterPositiveCoefficients, activeFilterNegativeCoefficients);
+                  activeFilterThresholds, activeFilterPositiveCoefficients, activeFilterNegativeCoefficients,
+                  directoryPath
+                  );
     
     
                   

@@ -126,7 +126,7 @@ inline int countStateChangesFromMinus1to0(const std::deque<int>& stateDeque);
 std::deque<int> convertDoubleDequeToIntDeque(const std::deque<double>& doubleDeque);
 
 template<typename T>
-void saveDequeIntoFile(const std::deque<T>& deque, std::string name);
+void saveDequeIntoFile(const std::deque<T>& deque, std::string name, const std::string directoryPath);
 
 
 template<typename T>
@@ -152,7 +152,9 @@ void simulation(const std::vector<SensorData>& sensorData,
 
                    std::vector<std::string>& results,
                    
-                   double iirAlpha);
+                   double iirAlpha,
+                   
+                   const std::string directoryPath);
 
 
 
@@ -164,7 +166,8 @@ void simulation(const std::vector<SensorData>& sensorData,
 void runSimulations(const std::vector<SensorData>& sensorData, 
                     const std::vector<unsigned int>& lags, const std::vector<double>& z_score_thresholds, const std::vector<double>& influences, 
                     const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices, const std::vector<double>& iirFilterAlpha,
-                    const std::vector<double>& actFiltThres, const std::vector<double>& activeFiltPosCoefs, const std::vector<double>& activeFiltNegCoefs);
+                    const std::vector<double>& actFiltThres, const std::vector<double>& activeFiltPosCoefs, const std::vector<double>& activeFiltNegCoefs,
+                    const std::string directoryPath);
 
 
 
