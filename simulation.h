@@ -136,6 +136,19 @@ void removeExcessSamples(std::deque<double>& outData, int size);
 void applyZScoreThresholding(const std::deque<double>& outData, std::deque<double>& sequenceDeque, int size, unsigned int lag, double z_score_threshold, double influence);
 void determineState(const std::deque<double>& sequenceDeque, std::deque<int>& stateDeque);
 
+
+double calculateSlope(const std::deque<double>& window);
+EventType analyzeSlope(double slope);
+
+
+
+void applyDetection(const std::deque<double>& outData, std::deque<int>& stateDeque);
+
+
+
+
+
+
 /*
 template<typename T>
 void populateVector(std::vector<T>& vec, T start, T end, T step);
@@ -169,6 +182,17 @@ void runSimulations(const std::vector<SensorData>& sensorData,
                     const std::vector<double>& actFiltThres, const std::vector<double>& activeFiltPosCoefs, const std::vector<double>& activeFiltNegCoefs,
                     const std::string directoryPath);
 
+void simulationActiveFilter(const std::vector<SensorData>& sensorData,
+
+                   const std::vector<int> bumpIndices, const std::vector<int> potholeIndices,
+
+                   double actFiltThres, double actFiltPosCoef, double actFiltNegCoef, int overlap,
+                   
+                   std::string directoryPath);
 
 
+void runSimulationsActiveFilterTesting(const std::vector<SensorData>& sensorData, 
+                    const std::vector<int>& bumpIndices, const std::vector<int>& potholeIndices,
+                    const std::vector<double>& actFiltThres, const std::vector<double>& activeFiltPosCoefs, const std::vector<double>& activeFiltNegCoefs, const std::vector<int>& windowOverlapSize,
+                    const std::string directoryPath);
 

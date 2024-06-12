@@ -104,29 +104,41 @@ int main(int argc, char* argv[]){
     lags = { 50 };
     
     //populateVector(lags, 0u, 70u, 5u);
-    //populateVector(z_score_thresholds, 7.0, 20.0, 1.0);
-    //populateVector(influences, 0.0, 0.3, 0.1);
+    populateVector(z_score_thresholds, 7.0, 13.0, 1.0);
+    //populateVector(influences, 0.8, 1.0, 0.1);
 
 
-    influences = { 0.0 }; 
-    z_score_thresholds = { 8.0, 10.0, 12.0 };
+    influences = { 1.0 }; 
+    //z_score_thresholds = { 10.0 }; 
+
+    std::vector<int> activeFilterWindowOverlap;
+    activeFilterWindowOverlap.clear();
+    activeFilterWindowOverlap = { 35 };
 
 
-    activeFilterThresholds = { 0.2 };
-    activeFilterPositiveCoefficients = { 1.4, 1.6, 1.8};
-    activeFilterNegativeCoefficients = { 0.0 };
+
+    populateVector(activeFilterThresholds, 0.15, 0.20, 0.01);
+
+    //activeFilterThresholds = { 0.2 };
+
+
+
+
+    activeFilterPositiveCoefficients = { 1.3, 1.4, 1.5};
+    //activeFilterNegativeCoefficients = { 0.5 };
 
     /*
     populateVector(activeFilterThresholds, 0.05, 0.5, 0.05);
     populateVector(activeFilterPositiveCoefficients, 1.1, 2.0, 0.1);
-    populateVector(activeFilterNegativeCoefficients, 0.1, 0.9, 0.1);
     */
+    populateVector(activeFilterNegativeCoefficients, 0.0, 0.6, 0.1);
+    
 
 
 
 
 
-    iirFilterAlphas = {0.7, 0.8, 0.9 };
+    iirFilterAlphas = { 0.9 };
 
     //populateVector(iirFilterAlphas, 0.0, 1.0, 0.1);
 
@@ -136,7 +148,8 @@ int main(int argc, char* argv[]){
 
     auto start = std::chrono::high_resolution_clock::now();
     
-
+    
+    
     runSimulations(sensorData, 
                   lags, z_score_thresholds, influences, 
                   bumpIndices, potholeIndices, 
@@ -144,6 +157,17 @@ int main(int argc, char* argv[]){
                   activeFilterThresholds, activeFilterPositiveCoefficients, activeFilterNegativeCoefficients,
                   directoryPath
                   );
+    
+
+   /*
+   runSimulationsActiveFilterTesting(sensorData, 
+                                      bumpIndices, potholeIndices, 
+                                      activeFilterThresholds, activeFilterPositiveCoefficients, activeFilterNegativeCoefficients, activeFilterWindowOverlap, 
+                                      directoryPath);
+    
+   */
+  
+    
     
     
                   

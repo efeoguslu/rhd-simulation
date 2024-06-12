@@ -198,7 +198,7 @@ def main():
     compound_acceleration_vector = load_data(os.path.join(target_folder_path, 'compound_acceleration_vector.txt'))
     active_filter_output = load_data(os.path.join(target_folder_path, 'active_filter_output.txt'))
     simulation_runtime_state_change = load_data(os.path.join(target_folder_path, 'simulation_runtime_state_deque.txt'))
-    simulation_runtime_sequence_deque = load_data(os.path.join(target_folder_path, 'simulation_runtime_sequence_deque.txt'))
+    #simulation_runtime_sequence_deque = load_data(os.path.join(target_folder_path, 'simulation_runtime_sequence_deque.txt'))
 
 
 
@@ -224,6 +224,8 @@ def main():
     plot_data(time_vector, active_filter_output, "active filter output", ax=ax)
 
     #plot_speed(dataList, gpsList, time_vector, ax=ax)
+    
+    
     #plot_data(time_vector, simulation_runtime_state_change, "simulation_runtime_state_change", ax=ax)
     #plot_data(time_vector, simulation_runtime_sequence_deque, "simulation_runtime_sequence_deque", ax=ax)
 

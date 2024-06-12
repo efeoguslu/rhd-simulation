@@ -1,6 +1,18 @@
 #include "sequence.h"
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 // Function to calculate the trend of a given window
 SequenceType getSequenceType(const std::deque<double>& window) {
     double sum = 0.0;
